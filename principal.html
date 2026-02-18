@@ -1,4 +1,4 @@
-﻿<!doctype html>
+<!doctype html>
 <html lang="pt-BR">
 <head>
 <meta charset="utf-8" />
@@ -264,7 +264,8 @@ const WORDS = [
   "RISCO","SALAS","SALTO","SANTO","SENTI","TERMO","TEMPO","TERRA","TIGRE",
   "TORRE","TRIGO","VALOR","VERBO","VERDE","VINHO","VIVER","ZEBRA","NOCHE",
   "BRISA","BRASA","CLUBE","DADOS","DANCA","FOSSA","GRUPO","IDEIA","NIVEL",
-  "PLANO","POETA","RAMOS","RENDA","ROSTO","RUINS","SINAL","SONHO","TEXTO"
+  "PLANO","POETA","RAMOS","RENDA","ROSTO","RUINS","SINAL","SONHO","TEXTO",
+  "RUELA","PISCA","DIQUE"
 ];
 
 // Subconjunto de soluções (pode ser a própria lista).
@@ -425,6 +426,81 @@ function getCurrentGuess(){
   return grid[currentRow].map(t => t.textContent).join("");
 }
 
+const RULES = {
+  "length": 5,
+  "requireVowel": true,
+  "forbiddenLetters": [
+    "K",
+    "W",
+    "Y"
+  ],
+  "qMustHaveU": true,
+  "forbiddenSequences": [
+    "NP",
+    "NB"
+  ],
+  "allowedDouble": [
+    "RR",
+    "SS"
+  ],
+  "maxConsonantsInRow": 2,
+  "allowedClusters": [
+    "BR",
+    "BL",
+    "CR",
+    "CL",
+    "DR",
+    "FR",
+    "FL",
+    "GR",
+    "GL",
+    "PR",
+    "PL",
+    "TR",
+    "VR",
+    "RN",
+    "RM",
+    "RT",
+    "RS",
+    "RC",
+    "RD",
+    "RL",
+    "NS",
+    "NT",
+    "ND",
+    "NC",
+    "NG",
+    "RB",
+    "ST"
+  ],
+  "forbiddenStart": [
+    "BN",
+    "BT",
+    "CT",
+    "DL",
+    "FN",
+    "GN",
+    "KT",
+    "PT",
+    "TM",
+    "VT",
+    "ZX"
+  ],
+  "forbiddenEnd": [
+    "H",
+    "W",
+    "K",
+    "Q",
+    "F",
+    "T"
+  ],
+  "bannedWords": [
+    "AAAAA",
+    "EEEEE",
+    "ABCDE"
+  ]
+};
+
 /* ===================== REGRAS E AVALIAÇÃO ===================== */
 function evaluate(guessRaw, targetRaw){
   // Usar formas normalizadas para avaliar com duplicatas.
@@ -459,105 +535,62 @@ function evaluate(guessRaw, targetRaw){
 }
 
 function isValidWord(guess){
-
   const g = normalize(guess).toUpperCase();
+  const R = RULES;
 
-  if(g.length !== WORD_LENGTH) return false;
+  if(g.length !== R.length) return false;
   if(!/^[A-ZÇ]+$/.test(g)) return false;
 
-  // precisa ter vogal
-  if(!/[AEIOU]/.test(g)) return false;
+  if(R.requireVowel && !/[AEIOU]/.test(g)) return false;
 
-  // bloquear letras estrangeiras
-  if(/[KWY]/.test(g)) return false;
+  if(R.forbiddenLetters?.some(l => g.includes(l))) return false;
 
-  // Q sempre seguido de U
-  for(let i=0;i<g.length;i++){
-    if(g[i]==="Q" && g[i+1]!=="U") return false;
-  }
-
-  // N antes de P ou B proibido
-  if(/N[PB]/.test(g)) return false;
-
-  // H permitido apenas no início ou em CH, LH, NH
-  for(let i=0;i<g.length;i++){
-    if(g[i]==="H"){
-      // início da palavra
-      if(i === 0) continue;
-
-      // dígrafos válidos
-      if(g[i-1] === "C" || g[i-1] === "L" || g[i-1] === "N") continue;
-
-      // qualquer outro caso é inválido
-      return false;
+  if(R.qMustHaveU){
+    for(let i=0;i<g.length;i++){
+      if(g[i]==="Q" && g[i+1]!=="U") return false;
     }
   }
 
-  // repetir letra (só RR e SS)
-  for(let i=0;i<g.length-1;i++){
-    if(g[i]===g[i+1]){
-      const pair = g[i]+g[i+1];
-      if(pair!=="RR" && pair!=="SS"){
+  if(R.forbiddenSequences?.some(seq => g.includes(seq))) return false;
+
+  if(R.allowedDouble){
+    for(let i=0;i<g.length-1;i++){
+      if(g[i]===g[i+1] && !R.allowedDouble.includes(g[i]+g[i+1])){
         return false;
       }
     }
   }
 
-  // no máximo 2 consoantes seguidas
-  let cons = 0;
-  for(let i=0;i<g.length;i++){
-    if(!/[AEIOU]/.test(g[i])){
-      cons++;
-      if(cons>2) return false;
-    } else {
-      cons=0;
+  if(R.maxConsonantsInRow){
+    let c = 0;
+    for(const ch of g){
+      if(!/[AEIOU]/.test(ch)){
+        c++;
+        if(c > R.maxConsonantsInRow) return false;
+      } else c = 0;
     }
   }
 
-  // encontros consonantais permitidos
-  const allowedClusters = [
-    "BR","BL","CR","CL","DR","FR","FL","GR","GL",
-    "PR","PL","TR","VR",
-    "RN","RM","RT","RS","RC","RD","RL",
-    "NS","NT","ND","NC","NG"
-  ];
-
-  for(let i=0;i<g.length-1;i++){
-    const pair = g[i]+g[i+1];
-    if(!/[AEIOU]/.test(g[i]) && !/[AEIOU]/.test(g[i+1])){
-      if(!allowedClusters.includes(pair) &&
-         pair!=="RR" && pair!=="SS" &&
-         pair!=="CH" && pair!=="LH" && pair!=="NH"){
-        return false;
+  if(R.allowedClusters){
+    for(let i=0;i<g.length-1;i++){
+      const a = g[i], b = g[i+1];
+      if(!/[AEIOU]/.test(a) && !/[AEIOU]/.test(b)){
+        const p = a+b;
+        if(!R.allowedClusters.includes(p) &&
+           !R.allowedDouble?.includes(p) &&
+           !["CH","LH","NH"].includes(p)){
+          return false;
+        }
       }
     }
   }
 
-  // bloqueio de inícios estranhos
-  const forbiddenStart = [
-    "BN","BT","CT","DL","FN","GN","KT","PT","TM","VT","ZX"
-  ];
-  for(const f of forbiddenStart){
-    if(g.startsWith(f)) return false;
-  }
-
-  // finais improváveis
-  const forbiddenEnd = ["H","W","K","Q"];
-  for(const f of forbiddenEnd){
-    if(g.endsWith(f)) return false;
-  }
-
-  // palavras proibidas manualmente
-  const bannedWords = [
-    "AAAAA","EEEEE","IIIII","OOOOO","UUUUU",
-    "ABCDE","QWERT","ZXCVB","ASDFG"
-  ];
-  if(bannedWords.includes(g)) return false;
+  if(R.forbiddenStart?.some(s => g.startsWith(s))) return false;
+  if(R.forbiddenEnd?.some(e => g.endsWith(e))) return false;
+  if(R.bannedWords?.includes(g)) return false;
 
   return true;
 }
-
-
 
 /* ===================== SUBMISSÃO ===================== */
 function submitGuess(){

@@ -1,0 +1,360 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<title>Editor de Regras — Mini Termo</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+
+<style>
+body{
+  margin:0;
+  font-family: system-ui, sans-serif;
+  background:#121213;
+  color:#e6e6e6;
+}
+header{
+  padding:12px;
+  display:flex;
+  gap:8px;
+  border-bottom:1px solid #333;
+}
+button{
+  background:#3a3a3c;
+  color:#fff;
+  border:0;
+  padding:8px 12px;
+  border-radius:6px;
+  cursor:pointer;
+}
+button.primary{ background:#6ca0ff }
+main{ padding:16px; max-width:900px; margin:auto }
+
+.rule{
+  border:1px solid #333;
+  border-radius:8px;
+  margin-bottom:12px;
+  padding:12px;
+}
+.rule h3{ margin:0 0 6px 0 }
+.rule small{ opacity:.7 }
+
+.items{
+  display:flex;
+  flex-wrap:wrap;
+  gap:6px;
+  margin-top:8px;
+}
+.item{
+  background:#2a2a2c;
+  padding:4px 8px;
+  border-radius:6px;
+  display:flex;
+  gap:6px;
+  align-items:center;
+}
+.item button{
+  background:#ff5c5c;
+  padding:2px 6px;
+}
+
+.add{
+  margin-top:8px;
+  display:flex;
+  gap:6px;
+}
+
+input{
+  background:#1e1e20;
+  color:#fff;
+  border:1px solid #333;
+  border-radius:6px;
+  padding:6px;
+}
+
+.test{
+  margin-top:24px;
+  padding:12px;
+  border:1px dashed #444;
+  border-radius:8px;
+}
+</style>
+</head>
+<body>
+
+<header>
+  <button onclick="openFolder()">Abrir pasta</button>
+  <button class="primary" onclick="saveRules()">Salvar no principal.html</button>
+</header>
+
+<main>
+  <div class="test">
+    <h3>Testar palavra</h3>
+    <input id="testWord" placeholder="Digite uma palavra">
+    <button onclick="test()">Testar</button>
+    <div id="testResult"></div>
+  </div>
+
+  <div id="rules"></div>
+</main>
+
+<script>
+let dirHandle, fileHandle;
+let RULES = {};
+
+async function openFolder(){
+  dirHandle = await window.showDirectoryPicker();
+  fileHandle = await dirHandle.getFileHandle("principal.html");
+  const file = await fileHandle.getFile();
+  const text = await file.text();
+
+  const match = text.match(/const RULES = ({[\s\S]*?});/);
+  if(!match){
+    alert("RULES não encontrado no principal.html");
+    return;
+  }
+  RULES = eval("(" + match[1] + ")");
+  render();
+}
+
+function render(){
+  const c = document.getElementById("rules");
+  c.innerHTML = "";
+
+  for(const key in RULES){
+    if(Array.isArray(RULES[key])){
+      renderListRule(c, key, RULES[key]);
+    }else{
+      renderSimpleRule(c, key, RULES[key]);
+    }
+  }
+}
+
+function renderSimpleRule(container, key, value){
+  const d = document.createElement("div");
+  d.className = "rule";
+  d.innerHTML = `
+    <h3>${key}</h3>
+    <small>Valor simples</small><br>
+    <input value="${value}" onchange="RULES['${key}']=this.value">
+  `;
+  container.appendChild(d);
+}
+
+function renderListRule(container, key, list){
+  const d = document.createElement("div");
+  d.className = "rule";
+
+  d.innerHTML = `
+    <h3>${key}</h3>
+    <small>Lista editável</small>
+    <div class="items">
+      ${list.map((v,i)=>`
+        <div class="item">
+          <span>${v}</span>
+          <button onclick="removeItem('${key}',${i})">✕</button>
+        </div>
+      `).join("")}
+    </div>
+    <div class="add">
+      <input id="add-${key}" placeholder="Novo item">
+      <button onclick="addItem('${key}')">Adicionar</button>
+    </div>
+  `;
+  container.appendChild(d);
+}
+
+function addItem(key){
+  const i = document.getElementById("add-"+key);
+  if(!i.value) return;
+  RULES[key].push(i.value.toUpperCase());
+  render();
+}
+
+function removeItem(key, index){
+  RULES[key].splice(index,1);
+  render();
+}
+
+async function saveRules(){
+  const file = await fileHandle.getFile();
+  let text = await file.text();
+
+  text = text.replace(
+    /const RULES = {[\s\S]*?};/,
+    "const RULES = " + JSON.stringify(RULES,null,2) + ";"
+  );
+
+  const w = await fileHandle.createWritable();
+  await w.write(text);
+  await w.close();
+
+  alert("Regras salvas com sucesso!");
+}
+
+function test(){
+  const input = document.getElementById("testWord");
+  const word = input.value.trim();
+  if(!word) return;
+
+  const res = validateWord(word);
+  const out = document.getElementById("testResult");
+  const W = word.toUpperCase();
+
+  if(res.ok){
+    out.innerHTML = `✅ ${W} = Palavra aceita`;
+  }else{
+    out.innerHTML = `
+      ❌ ${W} = Palavra bloqueada
+      <ul>
+        ${res.errors.map(e=>`
+          <li>
+            <b>${e.rule}</b>
+            ${e.item ? `(${e.item})` : ""}
+            — ${e.message}
+          </li>
+        `).join("")}
+      </ul>
+    `;
+  }
+
+  input.value = "";
+  input.focus();
+}
+
+document.getElementById("testWord").addEventListener("keydown", function(e){
+  if(e.key === "Enter"){
+    test();
+  }
+});
+
+document.getElementById("testWord").addEventListener("input", function(){
+  document.getElementById("testResult").innerHTML = "";
+});
+
+
+/* mesmo validador do jogo */
+function normalize(s){
+  return (s||"").normalize("NFD")
+    .replace(/[\u0300-\u036f]/g,"")
+    .replace(/ç/g,"c").replace(/Ç/g,"C");
+}
+
+function validateWord(guess){
+  const g = normalize(guess).toUpperCase();
+  const R = RULES;
+  const errors = [];
+
+  if(g.length !== Number(R.length)){
+    errors.push({
+      rule: "length",
+      expected: R.length,
+      actual: g.length,
+      message: "Tamanho inválido"
+    });
+  }
+
+  if(R.requireVowel && !/[AEIOU]/.test(g)){
+    errors.push({
+      rule: "requireVowel",
+      message: "A palavra precisa conter ao menos uma vogal"
+    });
+  }
+
+  if(R.forbiddenLetters){
+    R.forbiddenLetters.forEach(l=>{
+      if(g.includes(l)){
+        errors.push({
+          rule: "forbiddenLetters",
+          item: l,
+          message: `Letra proibida: ${l}`
+        });
+      }
+    });
+  }
+
+  if(R.forbiddenSequences){
+    R.forbiddenSequences.forEach(seq=>{
+      const idx = g.indexOf(seq);
+      if(idx !== -1){
+        errors.push({
+          rule: "forbiddenSequences",
+          item: seq,
+          index: idx,
+          message: `Sequência proibida: ${seq}`
+        });
+      }
+    });
+  }
+
+  if(R.allowedDouble){
+    for(let i=0;i<g.length-1;i++){
+      if(g[i] === g[i+1]){
+        const pair = g[i]+g[i+1];
+        if(!R.allowedDouble.includes(pair)){
+          errors.push({
+            rule: "allowedDouble",
+            item: pair,
+            index: i,
+            message: `Consoante dupla não permitida: ${pair}`
+          });
+        }
+      }
+    }
+  }
+
+  if(R.allowedClusters){
+    for(let i=0;i<g.length-1;i++){
+      const a = g[i], b = g[i+1];
+      const isACons = !/[AEIOU]/.test(a);
+      const isBCons = !/[AEIOU]/.test(b);
+
+      if(isACons && isBCons){
+        const pair = a+b;
+
+        const allowed =
+          R.allowedClusters.includes(pair) ||
+          R.allowedDouble?.includes(pair) ||
+          ["CH","LH","NH"].includes(pair);
+
+        if(!allowed){
+          errors.push({
+            rule: "allowedClusters",
+            item: pair,
+            index: i,
+            message: `Encontro consonantal não permitido: ${pair}`
+          });
+        }
+      }
+    }
+  }
+
+  if(R.forbiddenEnd){
+    R.forbiddenEnd.forEach(end=>{
+        if(g.endsWith(end)){
+        errors.push({
+            rule: "forbiddenEnd",
+            item: end,
+            message: `Palavra não pode terminar com ${end}`
+        });
+        }
+    });
+    }
+
+
+  if(R.bannedWords?.includes(g)){
+    errors.push({
+      rule: "bannedWords",
+      item: g,
+      message: "Palavra explicitamente proibida"
+    });
+  }
+
+  return {
+    ok: errors.length === 0,
+    errors
+  };
+}
+
+</script>
+</body>
+</html>
