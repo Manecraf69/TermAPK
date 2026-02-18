@@ -1,0 +1,725 @@
+﻿<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Mini Termo — 5 letras, 6 tentativas</title>
+<style>
+  :root{
+    --bg: #121213;
+    --tile: #3a3a3c;
+    --text: #e6e6e6;
+    --kbd-bg: #818384;
+    --absent: #3a3a3c;
+    --present: #b59f3b;
+    --correct: #538d4e;
+    --border: #3a3a3c;
+    --accent: #6ca0ff;
+    --toast-bg: rgba(0,0,0,.85);
+  }
+  @media (prefers-color-scheme: light){
+    :root{
+      --bg: #f2f2f2;
+      --tile: #d3d6da;
+      --text: #111;
+      --kbd-bg: #d3d6da;
+      --absent: #787c7e;
+      --present: #c9b458;
+      --correct: #6aaa64;
+      --border: #d3d6da;
+      --toast-bg: rgba(0,0,0,.85);
+    }
+  }
+  *{box-sizing:border-box}
+  html, body{height:100%}
+  body{
+    margin:0;
+    font-family: system-ui, -apple-system, Segoe UI, Roboto, Ubuntu, Cantarell, "Helvetica Neue", Arial, "Noto Sans", "Apple Color Emoji","Segoe UI Emoji","Segoe UI Symbol","Noto Color Emoji";
+    color:var(--text);
+    background:var(--bg);
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+  }
+  header{
+    width:100%;
+    max-width:560px;
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    padding:14px 16px;
+    border-bottom:1px solid var(--border);
+    gap:8px;
+  }
+  header h1{
+    font-size:20px;
+    letter-spacing:.08em;
+    text-transform:uppercase;
+    margin:0;
+  }
+  .btn{
+    background:transparent;
+    color:var(--text);
+    border:1px solid var(--border);
+    border-radius:8px;
+    padding:8px 10px;
+    cursor:pointer;
+    font-weight:600;
+  }
+  .btn.primary{
+    background:var(--accent);
+    color:#fff;
+    border:0;
+  }
+  main{
+    width:100%;
+    max-width:560px;
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+    padding:16px;
+    gap:16px;
+  }
+
+  /* Grade */
+  .board{
+    display:grid;
+    grid-template-columns: repeat(var(--cols,5), minmax(0, 56px));
+    grid-auto-rows:56px;
+    gap:8px;
+    margin-top:8px;
+    touch-action:manipulation;
+  }
+  @media (max-width:420px){
+    .board{ grid-template-columns: repeat(var(--cols,5), minmax(0, 48px)); grid-auto-rows:48px; gap:6px;}
+  }
+  .tile{
+    border:2px solid var(--border);
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    text-transform:uppercase;
+    font-weight:800;
+    font-size:1.3rem;
+    user-select:none;
+    background:transparent;
+    color:var(--text);
+  }
+  .tile.filled{ border-color:#9aa0a6; }
+  .tile.absent{ background:var(--absent); border-color:var(--absent); color:#fff;}
+  .tile.present{ background:var(--present); border-color:var(--present); color:#fff;}
+  .tile.correct{ background:var(--correct); border-color:var(--correct); color:#fff;}
+
+  /* Animações */
+  .shake{ animation: shake .3s linear; }
+  @keyframes shake{
+    0%,100%{transform:translateX(0)}
+    25%{transform:translateX(-4px)}
+    75%{transform:translateX(4px)}
+  }
+  .flip{
+    transform: rotateX(90deg);
+    transition: transform .15s ease-in;
+  }
+  .flip.show{
+    transform: rotateX(0);
+    transition: transform .15s ease-out;
+  }
+  .pop{ animation: pop .08s ease-out; }
+  @keyframes pop{
+    from{transform:scale(0.9)}
+    to{transform:scale(1)}
+  }
+
+  /* Teclado */
+  .keyboard{
+    display:flex;
+    flex-direction:column;
+    gap:6px;
+    width:100%;
+    max-width:560px;
+  }
+  .row{
+    display:flex;
+    justify-content:center;
+    gap:6px;
+  }
+  .key{
+    background:var(--kbd-bg);
+    color:#000;
+    border:0;
+    border-radius:6px;
+    padding:12px 8px;
+    font-weight:700;
+    min-width:32px;
+    cursor:pointer;
+    user-select:none;
+    text-transform:uppercase;
+  }
+  .key.big{ min-width:56px; }
+  .key.dark{ background:var(--absent); color:#fff; }
+  .key.present{ background:var(--present); color:#fff; }
+  .key.correct{ background:var(--correct); color:#fff; }
+
+  /* Toast / Modal */
+  .toast{
+    position:fixed;
+    top:16px; left:50%;
+    transform:translateX(-50%);
+    background:var(--toast-bg);
+    color:#fff;
+    padding:10px 14px;
+    border-radius:8px;
+    opacity:0;
+    pointer-events:none;
+    transition: opacity .2s ease;
+    font-weight:600;
+    z-index:5;
+  }
+  .toast.show{ opacity:1; }
+  dialog{
+    border:1px solid var(--border);
+    border-radius:12px;
+    padding:16px;
+    background:var(--bg);
+    color:var(--text);
+    width:min(92vw, 520px);
+  }
+  dialog::backdrop{ background: rgba(0,0,0,.5); }
+  .stats{
+    display:grid; grid-template-columns: repeat(4,1fr); gap:8px; margin-top:8px;
+  }
+  .stat{
+    text-align:center; border:1px solid var(--border); border-radius:8px; padding:8px;
+  }
+  .small{ opacity:.9; font-size:.92rem; }
+  details{
+    width:100%;
+    border:1px dashed var(--border);
+    border-radius:10px;
+    padding:10px 12px;
+  }
+  details[open]{ background: rgba(255,255,255,.02); }
+  summary{ cursor:pointer; font-weight:700; }
+  code.kbd{ background: #00000033; padding:2px 6px; border-radius:6px; }
+</style>
+</head>
+<body>
+  <header>
+    <h1>Mini Termo</h1>
+    <div style="display:flex; gap:8px;">
+      <button class="btn" id="btnHelp">Ajuda</button>
+      <button class="btn primary" id="btnShare" title="Compartilhar resultado" disabled>Compartilhar</button>
+    </div>
+  </header>
+
+  <main>
+    <div id="info" class="small">Acerte a palavra de <b>5 letras</b> em até <b>6 tentativas</b>.</div>
+    <div id="board" class="board" style="--cols:5;"></div>
+
+    <div class="keyboard" id="keyboard"></div>
+
+    <details>
+      <summary>Como jogar</summary>
+      <p>Digite com o teclado físico ou toque no teclado na tela. Use <code class="kbd">Enter</code> para enviar e <code class="kbd">Backspace</code> para apagar.</p>
+      <ul>
+        <li><b>Verde</b>: letra certa no lugar certo.</li>
+        <li><b>Amarelo</b>: letra existe, mas em outra posição.</li>
+        <li><b>Cinza</b>: letra não existe na palavra.</li>
+      </ul>
+      <p>Você pode digitar com acentos (ex.: “AÇÕES”) que o jogo entende — internamente comparamos sem acento.</p>
+    </details>
+  </main>
+
+  <div id="toast" class="toast" role="status" aria-live="polite"></div>
+
+  <dialog id="dlgEnd">
+    <h2 id="endTitle">Parabéns!</h2>
+    <p id="endMsg" class="small"></p>
+    <div class="stats">
+      <div class="stat"><div class="small">Jogos</div><div id="stGames" style="font-size:1.4rem; font-weight:800;">0</div></div>
+      <div class="stat"><div class="small">Vitórias</div><div id="stWins" style="font-size:1.4rem; font-weight:800;">0</div></div>
+      <div class="stat"><div class="small">Sequência</div><div id="stStreak" style="font-size:1.4rem; font-weight:800;">0</div></div>
+      <div class="stat"><div class="small">Máx. Seq.</div><div id="stMax" style="font-size:1.4rem; font-weight:800;">0</div></div>
+    </div>
+    <div style="display:flex; gap:8px; margin-top:12px; justify-content:flex-end;">
+      <button class="btn" id="btnAgain">Jogar de novo</button>
+      <button class="btn primary" id="btnShare2">Compartilhar</button>
+    </div>
+  </dialog>
+
+<script>
+/* ===================== CONFIGURAÇÃO ===================== */
+const WORD_LENGTH = 5;
+const MAX_TRIES = 6;
+
+/* Lista de palavras (sem acento, todas com 5 letras).
+   Dica: adicione mais para ampliar o vocabulário. */
+const WORDS = [
+  "AMIGO","AMORA","ANEIS","CACAO","CAFES","CARRO","CASAL","CASAR","CASAS",
+  "CASCA","CASCO","CERTO","CLARO","CORPO","DEVER","DENTE","ERROS","ERRAR",
+  "FALAR","FESTA","FRUTA","GATOS","GOLPE","JOGAR","JOGOS","LIVRO","LONGE",
+  "LUGAR","MAGIA","MELAO","MUNDO","NAVIO","NOITE","NINJA","NUVEM","OUVIR",
+  "PEDRA","PERNA","PERTO","PONTE","PONTO","PRAIA","PRACA","PRAZO","PRETO",
+  "RISCO","SALAS","SALTO","SANTO","SENTI","TERMO","TEMPO","TERRA","TIGRE",
+  "TORRE","TRIGO","VALOR","VERBO","VERDE","VINHO","VIVER","ZEBRA","NOCHE",
+  "BRISA","BRASA","CLUBE","DADOS","DANCA","FOSSA","GRUPO","IDEIA","NIVEL",
+  "PLANO","POETA","RAMOS","RENDA","ROSTO","RUINS","SINAL","SONHO","TEXTO"
+];
+
+// Subconjunto de soluções (pode ser a própria lista).
+const SOLUTIONS = WORDS;
+
+/* ===================== UTILITÁRIOS ===================== */
+const $ = sel => document.querySelector(sel);
+const $$ = sel => Array.from(document.querySelectorAll(sel));
+
+const normalize = (s) =>
+  (s || "")
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g,"")
+    .replace(/ç/g,"c").replace(/Ç/g,"C");
+
+const isAlphaPt = (ch) => /[A-Za-zÀ-ÖØ-öø-ÿÇç]/.test(ch);
+
+function showToast(msg, ms=1400){
+  const t = $("#toast");
+  t.textContent = msg;
+  t.classList.add("show");
+  clearTimeout(showToast._t);
+  showToast._t = setTimeout(()=> t.classList.remove("show"), ms);
+}
+
+/* ===================== ESTADO ===================== */
+let currentRow = 0;
+let currentCol = 0;
+let grid = []; // [ [tiles...], ... ]
+let solution = "";     // forma mostrada (pode ter acento se quiser no futuro)
+let solutionN = "";    // normalizada (sem acento) para comparação
+let gameOver = false;
+
+const stats = {
+  games: 0,
+  wins: 0,
+  streak: 0,
+  maxStreak: 0
+};
+function loadStats(){
+  try{
+    const s = JSON.parse(localStorage.getItem("mini-termo-stats")||"{}");
+    Object.assign(stats, s);
+  }catch{}
+}
+function saveStats(){
+  localStorage.setItem("mini-termo-stats", JSON.stringify(stats));
+}
+
+/* ===================== INICIALIZAÇÃO ===================== */
+function pickSolution(){
+  const idx = Math.floor(Math.random() * SOLUTIONS.length);
+  solution = SOLUTIONS[idx].toUpperCase();
+  solutionN = normalize(solution).toUpperCase();
+}
+
+function buildBoard(){
+  const board = $("#board");
+  board.innerHTML = "";
+  grid = [];
+  for(let r=0; r<MAX_TRIES; r++){
+    const row = [];
+    for(let c=0; c<WORD_LENGTH; c++){
+      const d = document.createElement("div");
+      d.className = "tile";
+      d.setAttribute("aria-label",`Letra ${c+1} da tentativa ${r+1}`);
+      board.appendChild(d);
+      row.push(d);
+    }
+    grid.push(row);
+  }
+}
+
+function buildKeyboard(){
+  /* Layout com Ç */
+  const rows = [
+    "Q W E R T Y U I O P".split(" "),
+    "A S D F G H J K L Ç".split(" "),
+    ["Enter", ..."Z X C V B N M".split(" "), "Backspace"]
+  ];
+  const kb = $("#keyboard");
+  kb.innerHTML = "";
+  rows.forEach((letters,i)=>{
+    const row = document.createElement("div");
+    row.className = "row";
+    letters.forEach(key=>{
+      const b = document.createElement("button");
+      b.className = "key";
+      b.textContent = key === "Backspace" ? "⌫" : key;
+      if(key === "Enter" || key === "Backspace") b.classList.add("big");
+      b.dataset.key = key;
+      b.addEventListener("click", onVirtualKey);
+      row.appendChild(b);
+    });
+    kb.appendChild(row);
+  });
+}
+
+function resetGame(){
+  currentRow = 0;
+  currentCol = 0;
+  gameOver = false;
+  $("#btnShare").disabled = true;
+  pickSolution();
+  buildBoard();
+  colorKeyboard.clear();
+  updateInfo();
+}
+
+function updateInfo(){
+  const info = $("#info");
+  if(!gameOver){
+    info.innerHTML = `Acerte a palavra de <b>${WORD_LENGTH}</b> letras em até <b>${MAX_TRIES}</b> tentativas.`;
+  }
+}
+
+/* ===================== ENTRADA ===================== */
+function onVirtualKey(e){
+  const k = e.currentTarget.dataset.key;
+  handleKey(k);
+}
+function handleKey(k){
+  if(gameOver) return;
+
+  if(k === "Enter"){
+    submitGuess();
+    return;
+  }
+  if(k === "Backspace"){
+    backspace();
+    return;
+  }
+
+  if(k.length === 1){
+    const ch = k;
+    if(isAlphaPt(ch)){
+      addLetter(ch);
+    }
+  }
+}
+function addLetter(ch){
+  if(currentCol >= WORD_LENGTH) return;
+  const letter = ch.toUpperCase();
+  const tile = grid[currentRow][currentCol];
+  tile.textContent = letter;
+  tile.classList.add("filled","pop");
+  setTimeout(()=> tile.classList.remove("pop"), 80);
+  currentCol++;
+}
+function backspace(){
+  if(currentCol === 0) return;
+  currentCol--;
+  const tile = grid[currentRow][currentCol];
+  tile.textContent = "";
+  tile.classList.remove("filled");
+}
+function getCurrentGuess(){
+  return grid[currentRow].map(t => t.textContent).join("");
+}
+
+/* ===================== REGRAS E AVALIAÇÃO ===================== */
+function evaluate(guessRaw, targetRaw){
+  // Usar formas normalizadas para avaliar com duplicatas.
+  const guess = normalize(guessRaw).toUpperCase();
+  const target = normalize(targetRaw).toUpperCase();
+  const result = Array(WORD_LENGTH).fill("absent");
+
+  const counts = {}; // contagem das letras do alvo
+  for(let i=0;i<WORD_LENGTH;i++){
+    const t = target[i];
+    counts[t] = (counts[t]||0) + 1;
+  }
+  // Primeiro: posições corretas
+  for(let i=0;i<WORD_LENGTH;i++){
+    if(guess[i] === target[i]){
+      result[i] = "correct";
+      counts[guess[i]]--;
+    }
+  }
+  // Segundo: presentes fora de lugar
+  for(let i=0;i<WORD_LENGTH;i++){
+    if(result[i] === "correct") continue;
+    const g = guess[i];
+    if(counts[g] > 0){
+      result[i] = "present";
+      counts[g]--;
+    }else{
+      result[i] = "absent";
+    }
+  }
+  return result;
+}
+
+function isValidWord(guess){
+
+  const g = normalize(guess).toUpperCase();
+
+  if(g.length !== WORD_LENGTH) return false;
+  if(!/^[A-ZÇ]+$/.test(g)) return false;
+
+  // precisa ter vogal
+  if(!/[AEIOU]/.test(g)) return false;
+
+  // bloquear letras estrangeiras
+  if(/[KWY]/.test(g)) return false;
+
+  // Q sempre seguido de U
+  for(let i=0;i<g.length;i++){
+    if(g[i]==="Q" && g[i+1]!=="U") return false;
+  }
+
+  // N antes de P ou B proibido
+  if(/N[PB]/.test(g)) return false;
+
+  // H permitido apenas no início ou em CH, LH, NH
+  for(let i=0;i<g.length;i++){
+    if(g[i]==="H"){
+      // início da palavra
+      if(i === 0) continue;
+
+      // dígrafos válidos
+      if(g[i-1] === "C" || g[i-1] === "L" || g[i-1] === "N") continue;
+
+      // qualquer outro caso é inválido
+      return false;
+    }
+  }
+
+  // repetir letra (só RR e SS)
+  for(let i=0;i<g.length-1;i++){
+    if(g[i]===g[i+1]){
+      const pair = g[i]+g[i+1];
+      if(pair!=="RR" && pair!=="SS"){
+        return false;
+      }
+    }
+  }
+
+  // no máximo 2 consoantes seguidas
+  let cons = 0;
+  for(let i=0;i<g.length;i++){
+    if(!/[AEIOU]/.test(g[i])){
+      cons++;
+      if(cons>2) return false;
+    } else {
+      cons=0;
+    }
+  }
+
+  // encontros consonantais permitidos
+  const allowedClusters = [
+    "BR","BL","CR","CL","DR","FR","FL","GR","GL",
+    "PR","PL","TR","VR",
+    "RN","RM","RT","RS","RC","RD","RL",
+    "NS","NT","ND","NC","NG"
+  ];
+
+  for(let i=0;i<g.length-1;i++){
+    const pair = g[i]+g[i+1];
+    if(!/[AEIOU]/.test(g[i]) && !/[AEIOU]/.test(g[i+1])){
+      if(!allowedClusters.includes(pair) &&
+         pair!=="RR" && pair!=="SS" &&
+         pair!=="CH" && pair!=="LH" && pair!=="NH"){
+        return false;
+      }
+    }
+  }
+
+  // bloqueio de inícios estranhos
+  const forbiddenStart = [
+    "BN","BT","CT","DL","FN","GN","KT","PT","TM","VT","ZX"
+  ];
+  for(const f of forbiddenStart){
+    if(g.startsWith(f)) return false;
+  }
+
+  // finais improváveis
+  const forbiddenEnd = ["H","W","K","Q"];
+  for(const f of forbiddenEnd){
+    if(g.endsWith(f)) return false;
+  }
+
+  // palavras proibidas manualmente
+  const bannedWords = [
+    "AAAAA","EEEEE","IIIII","OOOOO","UUUUU",
+    "ABCDE","QWERT","ZXCVB","ASDFG"
+  ];
+  if(bannedWords.includes(g)) return false;
+
+  return true;
+}
+
+
+
+/* ===================== SUBMISSÃO ===================== */
+function submitGuess(){
+  const guess = getCurrentGuess();
+  if(guess.length < WORD_LENGTH){
+    shakeRow(currentRow);
+    showToast("Faltam letras");
+    return;
+  }
+  if(!isValidWord(guess)){
+    shakeRow(currentRow);
+    showToast("Palavra não reconhecida");
+    return;
+  }
+
+  const outcome = evaluate(guess, solution);
+  revealRow(currentRow, outcome);
+
+  const win = outcome.every(s => s === "correct");
+  if(win){
+    endGame(true, currentRow+1);
+    return;
+  }
+  currentRow++;
+  currentCol = 0;
+  if(currentRow >= MAX_TRIES){
+    endGame(false, MAX_TRIES);
+  }
+}
+
+function revealRow(rowIdx, outcome){
+  const tiles = grid[rowIdx];
+  // Revelar em sequência com flip
+  outcome.forEach((state, i)=>{
+    const tile = tiles[i];
+    setTimeout(()=>{
+      tile.classList.add("flip");
+      setTimeout(()=>{
+        tile.classList.remove("flip");
+        tile.classList.add(state);
+        updateKeyboardKey(tile.textContent, state);
+      }, 150);
+    }, i * 260);
+  });
+}
+
+/* ===================== FEEDBACK / UI ===================== */
+function shakeRow(rowIdx){
+  const tiles = grid[rowIdx];
+  tiles.forEach(t => t.classList.add("shake"));
+  setTimeout(()=> tiles.forEach(t => t.classList.remove("shake")), 320);
+}
+
+const colorPriority = { "correct":3, "present":2, "absent":1 };
+const colorKeyboard = new Map();
+function updateKeyboardKey(letter, state){
+  const keyBtn = $(`.key[data-key="${letter}"]`);
+  const prev = colorKeyboard.get(letter) || "absent";
+  if(colorPriority[state] >= colorPriority[prev]){
+    colorKeyboard.set(letter, state);
+    if(keyBtn){
+      keyBtn.classList.remove("dark","present","correct");
+      if(state === "absent") keyBtn.classList.add("dark");
+      if(state === "present") keyBtn.classList.add("present");
+      if(state === "correct") keyBtn.classList.add("correct");
+    }
+  }
+}
+
+/* ===================== FIM DE JOGO / ESTATÍSTICAS ===================== */
+function endGame(won, tries){
+  gameOver = true;
+  $("#btnShare").disabled = false;
+
+  stats.games++;
+  if(won){
+    stats.wins++;
+    stats.streak++;
+    if(stats.streak > stats.maxStreak) stats.maxStreak = stats.streak;
+  }else{
+    stats.streak = 0;
+  }
+  saveStats();
+
+  const dlg = $("#dlgEnd");
+  $("#endTitle").textContent = won ? "🎉 Parabéns!" : "💡 Boa tentativa!";
+  $("#endMsg").innerHTML = won
+    ? `Você acertou em <b>${tries}</b> ${tries===1 ? "tentativa" : "tentativas"}.`
+    : `A palavra era <b>${solution}</b>.`;
+
+  $("#stGames").textContent = stats.games;
+  $("#stWins").textContent = stats.wins;
+  $("#stStreak").textContent = stats.streak;
+  $("#stMax").textContent = stats.maxStreak;
+
+  dlg.showModal();
+}
+
+/* Compartilhar */
+function buildShareText(){
+  // Montar grade de emojis com base nas cores exibidas
+  let lines = [];
+  for(let r=0; r<Math.min(currentRow + (gameOver?0:1), MAX_TRIES); r++){
+    const tiles = grid[r];
+    const line = tiles.map(t=>{
+      if(t.classList.contains("correct")) return "🟩";
+      if(t.classList.contains("present")) return "🟨";
+      if(t.classList.contains("absent")) return "⬛";
+      return "⬜";
+    }).join("");
+    lines.push(line);
+  }
+  const title = `Mini Termo ${WORD_LENGTH}×${MAX_TRIES}`;
+  const result = gameOver && $$("#board .tile.correct").length === WORD_LENGTH*(currentRow?1:0)
+    ? `${currentRow}/${MAX_TRIES}` : `${Math.min(currentRow,MAX_TRIES)}/${MAX_TRIES}`;
+  return `${title} ${result}\n${lines.join("\n")}`;
+}
+async function shareResult(){
+  const text = buildShareText();
+  try{
+    await navigator.clipboard.writeText(text);
+    showToast("Resultado copiado!");
+  }catch(e){
+    // fallback
+    const ta = document.createElement("textarea");
+    ta.value = text;
+    document.body.appendChild(ta);
+    ta.select();
+    document.execCommand("copy");
+    document.body.removeChild(ta);
+    showToast("Resultado copiado!");
+  }
+}
+
+/* ===================== EVENTOS ===================== */
+document.addEventListener("keydown", (e)=>{
+  if(e.ctrlKey || e.metaKey || e.altKey) return;
+  if(e.key === "Enter" || e.key === "Backspace"){
+    handleKey(e.key);
+    e.preventDefault();
+    return;
+  }
+  if(e.key.length === 1 && isAlphaPt(e.key)){
+    handleKey(e.key);
+    e.preventDefault();
+  }
+});
+
+$("#btnHelp").addEventListener("click", ()=>{
+  showToast("Use Enter para enviar e Backspace para apagar.");
+});
+$("#btnShare").addEventListener("click", shareResult);
+$("#btnShare2").addEventListener("click", shareResult);
+$("#btnAgain").addEventListener("click", ()=>{
+  $("#dlgEnd").close();
+  resetGame();
+});
+
+/* ===================== START ===================== */
+loadStats();
+buildKeyboard();
+resetGame();
+</script>
+</body>
+</html>
