@@ -272,6 +272,32 @@ function validateWord(guess){
     });
   }
 
+  if(R.qMustHaveU){
+    for(let i=0;i<g.length;i++){
+      if(g[i] === "Q"){
+        const next = g[i+1];
+        const next2 = g[i+2];
+
+        if(next !== "U"){
+          errors.push({
+            rule: "qMustHaveU",
+            item: "Q",
+            index: i,
+            message: "Q deve ser seguido de U"
+          });
+        } 
+        else if(!/[AEIO]/.test(next2)){
+          errors.push({
+            rule: "qMustHaveU",
+            item: "QU",
+            index: i,
+            message: "Depois de QU deve vir A, E, I ou O (não U ou outra letra)"
+          });
+        }
+      }
+    }
+  }
+
   if(R.forbiddenSequences){
     R.forbiddenSequences.forEach(seq=>{
       const idx = g.indexOf(seq);
@@ -295,7 +321,7 @@ function validateWord(guess){
             rule: "allowedDouble",
             item: pair,
             index: i,
-            message: `Consoante dupla não permitida: ${pair}`
+            message: `Letra dupla não permitida: ${pair}`
           });
         }
       }

@@ -369,9 +369,18 @@ function resetGame(){
   currentCol = 0;
   gameOver = false;
   $("#btnShare").disabled = true;
+
   pickSolution();
   buildBoard();
+
+  // Limpa estado interno
   colorKeyboard.clear();
+
+  // 🔹 Limpa cores visuais do teclado
+  $$(".key").forEach(key => {
+    key.classList.remove("dark", "present", "correct");
+  });
+
   updateInfo();
 }
 
@@ -444,35 +453,6 @@ const RULES = {
     "SS"
   ],
   "maxConsonantsInRow": 2,
-  "allowedClusters": [
-    "BR",
-    "BL",
-    "CR",
-    "CL",
-    "DR",
-    "FR",
-    "FL",
-    "GR",
-    "GL",
-    "PR",
-    "PL",
-    "TR",
-    "VR",
-    "RN",
-    "RM",
-    "RT",
-    "RS",
-    "RC",
-    "RD",
-    "RL",
-    "NS",
-    "NT",
-    "ND",
-    "NC",
-    "NG",
-    "RB",
-    "ST"
-  ],
   "forbiddenStart": [
     "BN",
     "BT",
@@ -484,20 +464,30 @@ const RULES = {
     "PT",
     "TM",
     "VT",
-    "ZX"
+    "ZX",
+    "Ç",
+    "DV",
+    "TM",
+    "BD",
+    "PT"
   ],
   "forbiddenEnd": [
     "H",
-    "W",
-    "K",
     "Q",
     "F",
-    "T"
+    "T",
+    "P",
+    "D",
+    "G",
+    "J",
+    "C",
+    "V",
+    "B",
+    "Ç"
   ],
   "bannedWords": [
-    "AAAAA",
-    "EEEEE",
-    "ABCDE"
+    "JANJA",
+    "CROTE"
   ]
 };
 
@@ -547,7 +537,13 @@ function isValidWord(guess){
 
   if(R.qMustHaveU){
     for(let i=0;i<g.length;i++){
-      if(g[i]==="Q" && g[i+1]!=="U") return false;
+      if(g[i] === "Q"){
+        const next = g[i+1];
+        const next2 = g[i+2];
+
+        if(next !== "U") return false;
+        if(!/[AEIO]/.test(next2)) return false;
+      }
     }
   }
 
