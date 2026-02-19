@@ -135,6 +135,12 @@
     from{transform:scale(0.9)}
     to{transform:scale(1)}
   }
+  .winpop{ animation: winpop .35s ease; }
+  @keyframes winpop{
+    0%{transform:scale(1)}
+    50%{transform:scale(1.15)}
+    100%{transform:scale(1)}
+  }
 
   /* Teclado */
   .keyboard{
@@ -168,6 +174,46 @@
   .key.manual-off{
     opacity:.35;
     filter: grayscale(1);
+  }
+  .key.keyflash{
+    animation: keyflash .26s ease;
+  }
+  .key.keyflash-error{
+    animation: keyflashError .26s ease;
+  }
+  @keyframes keyflash{
+    0%{
+      background:var(--kbd-bg);
+      color:#111;
+      transform:scale(1);
+    }
+    45%{
+      background:#5aa9ff;
+      color:#fff;
+      transform:scale(1.04);
+    }
+    100%{
+      background:var(--kbd-bg);
+      color:#111;
+      transform:scale(1);
+    }
+  }
+  @keyframes keyflashError{
+    0%{
+      background:var(--kbd-bg);
+      color:#111;
+      transform:scale(1);
+    }
+    45%{
+      background:#e05555;
+      color:#fff;
+      transform:scale(1.04);
+    }
+    100%{
+      background:var(--kbd-bg);
+      color:#111;
+      transform:scale(1);
+    }
   }
 
   @media (max-width:600px){
@@ -247,7 +293,8 @@ const KEY_LONG_PRESS_MS = 500;
 /* Lista de palavras (sem acento, todas com 5 letras).
    Dica: adicione mais para ampliar o vocabulário. */
 const WORDS = [
-  "AMIGO","AMORA","ANEIS","CACAO","CAFES","CARRO","CASAL","CASAR","CASAS",
+  "AMIGO",
+  "AMORA","ANEIS","CACAO","CAFES","CARRO","CASAL","CASAR","CASAS",
   "CASCA","CASCO","CERTO","CLARO","CORPO","DEVER","DENTE","ERROS","ERRAR",
   "FALAR","FESTA","FRUTA","GATOS","GOLPE","JOGAR","JOGOS","LIVRO","LONGE",
   "LUGAR","MAGIA","MELAO","MUNDO","NAVIO","NOITE","NINJA","NUVEM","OUVIR",
@@ -296,6 +343,27 @@ function showToast(msg, ms=1400){
   t.classList.add("show");
   clearTimeout(showToast._t);
   showToast._t = setTimeout(()=> t.classList.remove("show"), ms);
+}
+
+function flashKey(k, mode="normal"){
+  const raw = String(k || "");
+  const upper = raw.toUpperCase();
+  const btn =
+    $(`.key[data-key="${raw}"]`) ||
+    $(`.key[data-key="${upper}"]`);
+  if(!btn) return;
+  btn.classList.remove("keyflash", "keyflash-error");
+  // reinicia a animação mesmo em toques rápidos sucessivos
+  void btn.offsetWidth;
+  const cls = mode === "error" ? "keyflash-error" : "keyflash";
+  btn.classList.add(cls);
+  setTimeout(()=> btn.classList.remove("keyflash", "keyflash-error"), 280);
+}
+
+function isDiscardedLetter(k){
+  const upper = String(k || "").toUpperCase();
+  if(upper.length !== 1 || !isAlphaPt(upper)) return false;
+  return colorKeyboard.get(upper) === "absent";
 }
 
 /* ===================== ESTADO ===================== */
@@ -425,6 +493,9 @@ function onVirtualKey(e){
   }
   if(e.currentTarget.classList.contains("manual-off")) return;
   const k = e.currentTarget.dataset.key;
+  if(k !== "Enter"){
+    flashKey(k, isDiscardedLetter(k) ? "error" : "normal");
+  }
   handleKey(k);
 }
 function onVirtualKeyRightClick(e){
@@ -563,18 +634,6 @@ function deleteLetter() {
 
   updateCursor();
 }
-
-// clique em um tile também ativa o cursor
-grid.forEach(row => {
-  row.forEach(tile => {
-    tile.addEventListener("click", () => {
-      currentRow = parseInt(tile.dataset.row);
-      currentCol = parseInt(tile.dataset.col);
-      cursorActive = true;
-      updateCursor();
-    });
-  });
-});
 
 const RULES = {
   "length": 5,
@@ -768,16 +827,19 @@ function getCurrentGuess(){
 function submitGuess() {
   const guess = getCurrentGuess();
   if (guess.length < WORD_LENGTH) {
+    flashKey("Enter", "error");
     shakeRow(currentRow);
     showToast("Faltam letras");
     return;
   }
   if (!isValidWord(guess)) {
+    flashKey("Enter", "error");
     shakeRow(currentRow);
     showToast("Palavra não reconhecida");
     return;
   }
 
+  flashKey("Enter", "normal");
   const outcome = evaluate(guess, solution);
   revealRow(currentRow, outcome);
 
@@ -788,7 +850,8 @@ function submitGuess() {
     const win = outcome.every(s => s === "correct");
 
     if (win) {
-      endGame(true, currentRow + 1);
+      animateWinRow(currentRow);
+      setTimeout(() => endGame(true, currentRow + 1), WORD_LENGTH * 120 + 220);
       return;
     }
 
@@ -806,6 +869,19 @@ function submitGuess() {
     updateCursor();
 
   }, revealTime);
+}
+
+function animateWinRow(rowIdx){
+  const tiles = grid[rowIdx] || [];
+  tiles.forEach((tile, i) => {
+    setTimeout(() => {
+      tile.classList.remove("winpop");
+      // força reflow para reiniciar animação mesmo em vitórias seguidas
+      void tile.offsetWidth;
+      tile.classList.add("winpop");
+      setTimeout(() => tile.classList.remove("winpop"), 360);
+    }, i * 120);
+  });
 }
 
 function revealRow(rowIdx, outcome){
@@ -879,6 +955,7 @@ function endGame(won, tries){
 document.addEventListener("keydown", (e)=>{
   if(e.ctrlKey || e.metaKey || e.altKey) return;
   if(e.key === "Enter" || e.key === "Backspace"){
+    if(e.key === "Backspace") flashKey(e.key);
     handleKey(e.key);
     e.preventDefault();
     return;
@@ -888,6 +965,7 @@ document.addEventListener("keydown", (e)=>{
     e.preventDefault();
   }
   if(e.key.length === 1 && isAlphaPt(e.key)){
+    flashKey(e.key, isDiscardedLetter(e.key) ? "error" : "normal");
     handleKey(e.key);
     e.preventDefault();
   }
@@ -904,9 +982,9 @@ document.addEventListener("keydown", (e) => {
     case "ArrowLeft":
       if(!cursorActive){
         cursorActive = true;
-        currentCol = 0; // primeira letra
-      } else if(currentCol > 0){
-        currentCol--;
+        currentCol = WORD_LENGTH - 1; // última letra
+      } else {
+        currentCol = (currentCol - 1 + WORD_LENGTH) % WORD_LENGTH;
       }
       updateCursor();
       e.preventDefault();
@@ -915,9 +993,9 @@ document.addEventListener("keydown", (e) => {
     case "ArrowRight":
       if(!cursorActive){
         cursorActive = true;
-        currentCol = WORD_LENGTH - 1; // última letra
-      } else if(currentCol < WORD_LENGTH - 1){
-        currentCol++;
+        currentCol = 0; // primeira letra
+      } else {
+        currentCol = (currentCol + 1) % WORD_LENGTH;
       }
       updateCursor();
       e.preventDefault();
