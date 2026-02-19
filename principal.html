@@ -71,6 +71,10 @@
     color:#fff;
     border:0;
   }
+  .tile.cursor{
+    border-color: var(--accent);
+    box-shadow: 0 0 0 2px var(--accent) inset;
+  }
   main{
     width:100%;
     max-width:560px;
@@ -193,42 +197,13 @@
     text-align:center; border:1px solid var(--border); border-radius:8px; padding:8px;
   }
   .small{ opacity:.9; font-size:.92rem; }
-  details{
-    width:100%;
-    border:1px dashed var(--border);
-    border-radius:10px;
-    padding:10px 12px;
-  }
-  details[open]{ background: rgba(255,255,255,.02); }
-  summary{ cursor:pointer; font-weight:700; }
-  code.kbd{ background: #00000033; padding:2px 6px; border-radius:6px; }
 </style>
 </head>
 <body>
-  <header>
-    <h1>Mini Termo</h1>
-    <div style="display:flex; gap:8px;">
-      <button class="btn" id="btnHelp">Ajuda</button>
-      <button class="btn primary" id="btnShare" title="Compartilhar resultado" disabled>Compartilhar</button>
-    </div>
-  </header>
-
   <main>
-    <div id="info" class="small">Acerte a palavra de <b>5 letras</b> em até <b>6 tentativas</b>.</div>
     <div id="board" class="board" style="--cols:5;"></div>
 
     <div class="keyboard" id="keyboard"></div>
-
-    <details>
-      <summary>Como jogar</summary>
-      <p>Digite com o teclado físico ou toque no teclado na tela. Use <code class="kbd">Enter</code> para enviar e <code class="kbd">Backspace</code> para apagar.</p>
-      <ul>
-        <li><b>Verde</b>: letra certa no lugar certo.</li>
-        <li><b>Amarelo</b>: letra existe, mas em outra posição.</li>
-        <li><b>Cinza</b>: letra não existe na palavra.</li>
-      </ul>
-      <p>Você pode digitar com acentos (ex.: “AÇÕES”) que o jogo entende — internamente comparamos sem acento.</p>
-    </details>
   </main>
 
   <div id="toast" class="toast" role="status" aria-live="polite"></div>
@@ -244,7 +219,6 @@
     </div>
     <div style="display:flex; gap:8px; margin-top:12px; justify-content:flex-end;">
       <button class="btn" id="btnAgain">Jogar de novo</button>
-      <button class="btn primary" id="btnShare2">Compartilhar</button>
     </div>
   </dialog>
 
@@ -322,16 +296,28 @@ function pickSolution(){
   solutionN = normalize(solution).toUpperCase();
 }
 
-function buildBoard(){
+function buildBoard() {
   const board = $("#board");
   board.innerHTML = "";
   grid = [];
-  for(let r=0; r<MAX_TRIES; r++){
+  for (let r = 0; r < MAX_TRIES; r++) {
     const row = [];
-    for(let c=0; c<WORD_LENGTH; c++){
+    for (let c = 0; c < WORD_LENGTH; c++) {
       const d = document.createElement("div");
       d.className = "tile";
-      d.setAttribute("aria-label",`Letra ${c+1} da tentativa ${r+1}`);
+      d.dataset.row = r;
+      d.dataset.col = c;
+
+      // Clique ativa o cursor sempre
+      d.addEventListener("click", () => {
+        if (gameOver) return;
+        currentRow = r;
+        currentCol = c;
+        cursorActive = true;  // ativa o cursor
+        updateCursor();
+      });
+
+      d.setAttribute("aria-label", `Letra ${c + 1} da tentativa ${r + 1}`);
       board.appendChild(d);
       row.push(d);
     }
@@ -343,8 +329,8 @@ function buildKeyboard(){
   /* Layout com Ç */
   const rows = [
     "Q W E R T Y U I O P".split(" "),
-    "A S D F G H J K L Ç".split(" "),
-    ["Enter", ..."Z X C V B N M".split(" "), "Backspace"]
+    "A S D F G H J K L Backspace".split(" "),
+    [..."Z X C V B N M".split(" "), "Enter"]
   ];
   const kb = $("#keyboard");
   kb.innerHTML = "";
@@ -368,7 +354,6 @@ function resetGame(){
   currentRow = 0;
   currentCol = 0;
   gameOver = false;
-  $("#btnShare").disabled = true;
 
   pickSolution();
   buildBoard();
@@ -382,6 +367,7 @@ function resetGame(){
   });
 
   updateInfo();
+  updateCursor();
 }
 
 function updateInfo(){
@@ -415,25 +401,94 @@ function handleKey(k){
     }
   }
 }
-function addLetter(ch){
-  if(currentCol >= WORD_LENGTH) return;
-  const letter = ch.toUpperCase();
+
+function addLetter(ch) {
+  if (!cursorActive) return;
+
+  // Coloca a letra no tile atual
   const tile = grid[currentRow][currentCol];
-  tile.textContent = letter;
+  tile.textContent = ch.toUpperCase();
   tile.classList.add("filled","pop");
   setTimeout(()=> tile.classList.remove("pop"), 80);
-  currentCol++;
+
+  // Procura o próximo tile vazio à direita
+  let nextCol = grid[currentRow].findIndex((t, i) => i > currentCol && !t.textContent);
+
+  // Se não encontrou à direita, procura da esquerda para a direita
+  if (nextCol === -1) {
+    nextCol = grid[currentRow].findIndex(t => !t.textContent);
+  }
+
+  // Atualiza currentCol ou desativa cursor se não houver nenhum vazio
+  if (nextCol !== -1) {
+    currentCol = nextCol;
+    cursorActive = true;
+  } else {
+    cursorActive = false; // linha cheia
+  }
+
+  updateCursor();
 }
-function backspace(){
-  if(currentCol === 0) return;
-  currentCol--;
+
+function backspace() {
+  // se o cursor está desativado, reativa antes
+  if(!cursorActive) {
+    cursorActive = true;
+    // garante que o cursor aponte para o último tile
+    currentCol = WORD_LENGTH - 1;
+  }
+
   const tile = grid[currentRow][currentCol];
-  tile.textContent = "";
-  tile.classList.remove("filled");
+
+  if (tile.textContent) {
+    tile.textContent = "";
+    tile.classList.remove("filled");
+  } else if (currentCol > 0) {
+    currentCol--;
+    const prevTile = grid[currentRow][currentCol];
+    prevTile.textContent = "";
+    prevTile.classList.remove("filled");
+  }
+
+  updateCursor();
 }
-function getCurrentGuess(){
-  return grid[currentRow].map(t => t.textContent).join("");
+
+function deleteLetter() {
+  // se o cursor está desativado, reativa antes
+  if (!cursorActive) {
+    cursorActive = true;
+    // garante que o cursor aponte para o primeiro tile
+    currentCol = 0;
+  }
+
+  const tile = grid[currentRow][currentCol];
+
+  if (tile.textContent) {
+    // apaga a letra do tile atual
+    tile.textContent = "";
+    tile.classList.remove("filled");
+  } else if (currentCol < WORD_LENGTH - 1) {
+    // move para frente e apaga o próximo tile
+    currentCol++;
+    const nextTile = grid[currentRow][currentCol];
+    nextTile.textContent = "";
+    nextTile.classList.remove("filled");
+  }
+
+  updateCursor();
 }
+
+// clique em um tile também ativa o cursor
+grid.forEach(row => {
+  row.forEach(tile => {
+    tile.addEventListener("click", () => {
+      currentRow = parseInt(tile.dataset.row);
+      currentCol = parseInt(tile.dataset.col);
+      cursorActive = true;
+      updateCursor();
+    });
+  });
+});
 
 const RULES = {
   "length": 5,
@@ -589,14 +644,30 @@ function isValidWord(guess){
 }
 
 /* ===================== SUBMISSÃO ===================== */
-function submitGuess(){
+let cursorActive = true; // nova flag para controlar se o cursor está ativo
+
+function updateCursor() {
+  $$(".tile").forEach(t => t.classList.remove("cursor"));
+  if(cursorActive) {
+    const tile = grid[currentRow][currentCol];
+    if(tile) tile.classList.add("cursor");
+  }
+}
+
+function getCurrentGuess(){
+  return grid[currentRow]
+    .map(tile => tile.textContent || "")
+    .join("");
+}
+
+function submitGuess() {
   const guess = getCurrentGuess();
-  if(guess.length < WORD_LENGTH){
+  if (guess.length < WORD_LENGTH) {
     shakeRow(currentRow);
     showToast("Faltam letras");
     return;
   }
-  if(!isValidWord(guess)){
+  if (!isValidWord(guess)) {
     shakeRow(currentRow);
     showToast("Palavra não reconhecida");
     return;
@@ -606,15 +677,20 @@ function submitGuess(){
   revealRow(currentRow, outcome);
 
   const win = outcome.every(s => s === "correct");
-  if(win){
-    endGame(true, currentRow+1);
+  if (win) {
+    endGame(true, currentRow + 1);
     return;
   }
+
+  // Palavra enviada com sucesso, prepara a próxima linha
   currentRow++;
   currentCol = 0;
-  if(currentRow >= MAX_TRIES){
+  cursorActive = true;  // cursor ativado novamente na primeira letra
+  if (currentRow >= MAX_TRIES) {
     endGame(false, MAX_TRIES);
   }
+
+  updateCursor();
 }
 
 function revealRow(rowIdx, outcome){
@@ -659,7 +735,6 @@ function updateKeyboardKey(letter, state){
 /* ===================== FIM DE JOGO / ESTATÍSTICAS ===================== */
 function endGame(won, tries){
   gameOver = true;
-  $("#btnShare").disabled = false;
 
   stats.games++;
   if(won){
@@ -685,42 +760,6 @@ function endGame(won, tries){
   dlg.showModal();
 }
 
-/* Compartilhar */
-function buildShareText(){
-  // Montar grade de emojis com base nas cores exibidas
-  let lines = [];
-  for(let r=0; r<Math.min(currentRow + (gameOver?0:1), MAX_TRIES); r++){
-    const tiles = grid[r];
-    const line = tiles.map(t=>{
-      if(t.classList.contains("correct")) return "🟩";
-      if(t.classList.contains("present")) return "🟨";
-      if(t.classList.contains("absent")) return "⬛";
-      return "⬜";
-    }).join("");
-    lines.push(line);
-  }
-  const title = `Mini Termo ${WORD_LENGTH}×${MAX_TRIES}`;
-  const result = gameOver && $$("#board .tile.correct").length === WORD_LENGTH*(currentRow?1:0)
-    ? `${currentRow}/${MAX_TRIES}` : `${Math.min(currentRow,MAX_TRIES)}/${MAX_TRIES}`;
-  return `${title} ${result}\n${lines.join("\n")}`;
-}
-async function shareResult(){
-  const text = buildShareText();
-  try{
-    await navigator.clipboard.writeText(text);
-    showToast("Resultado copiado!");
-  }catch(e){
-    // fallback
-    const ta = document.createElement("textarea");
-    ta.value = text;
-    document.body.appendChild(ta);
-    ta.select();
-    document.execCommand("copy");
-    document.body.removeChild(ta);
-    showToast("Resultado copiado!");
-  }
-}
-
 /* ===================== EVENTOS ===================== */
 document.addEventListener("keydown", (e)=>{
   if(e.ctrlKey || e.metaKey || e.altKey) return;
@@ -729,20 +768,68 @@ document.addEventListener("keydown", (e)=>{
     e.preventDefault();
     return;
   }
+  if(e.key === "Delete") {
+    deleteLetter();
+    e.preventDefault();
+  }
   if(e.key.length === 1 && isAlphaPt(e.key)){
     handleKey(e.key);
     e.preventDefault();
   }
 });
-
-$("#btnHelp").addEventListener("click", ()=>{
-  showToast("Use Enter para enviar e Backspace para apagar.");
-});
-$("#btnShare").addEventListener("click", shareResult);
-$("#btnShare2").addEventListener("click", shareResult);
 $("#btnAgain").addEventListener("click", ()=>{
   $("#dlgEnd").close();
   resetGame();
+});
+document.addEventListener("keydown", (e) => {
+  if(e.ctrlKey || e.metaKey || e.altKey) return;
+
+  // Movimentação com setas
+  switch(e.key){
+    case "ArrowLeft":
+      if(!cursorActive){
+        cursorActive = true;
+        currentCol = 0; // primeira letra
+      } else if(currentCol > 0){
+        currentCol--;
+      }
+      updateCursor();
+      e.preventDefault();
+      return;
+
+    case "ArrowRight":
+      if(!cursorActive){
+        cursorActive = true;
+        currentCol = WORD_LENGTH - 1; // última letra
+      } else if(currentCol < WORD_LENGTH - 1){
+        currentCol++;
+      }
+      updateCursor();
+      e.preventDefault();
+      return;
+
+    case "ArrowUp":
+      if(!cursorActive){
+        cursorActive = true;
+        currentCol = WORD_LENGTH - 1; // última letra
+      } else if(currentCol < WORD_LENGTH - 1){
+        currentCol++;
+      }
+      updateCursor();
+      e.preventDefault();
+      return;
+
+    case "ArrowDown":
+      if(!cursorActive){
+        cursorActive = true;
+        currentCol = 0; // primeira letra
+      } else if(currentCol > 0){
+        currentCol--;
+      }
+      updateCursor();
+      e.preventDefault();
+      return;
+  }
 });
 
 /* ===================== START ===================== */
