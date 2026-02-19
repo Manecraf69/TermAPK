@@ -165,6 +165,10 @@
   .key.dark{ background:var(--absent); color:#fff; }
   .key.present{ background:var(--present); color:#fff; }
   .key.correct{ background:var(--correct); color:#fff; }
+  .key.manual-off{
+    opacity:.35;
+    filter: grayscale(1);
+  }
 
   @media (max-width:600px){
     .keyboard{ gap:4px; max-width:400px; }
@@ -238,6 +242,7 @@
 /* ===================== CONFIGURAÇÃO ===================== */
 const WORD_LENGTH = 5;
 const MAX_TRIES = 6;
+const KEY_LONG_PRESS_MS = 500;
 
 /* Lista de palavras (sem acento, todas com 5 letras).
    Dica: adicione mais para ampliar o vocabulário. */
@@ -375,6 +380,11 @@ function buildKeyboard(){
       if(key === "Enter" || key === "Backspace") b.classList.add("big");
       b.dataset.key = key;
       b.addEventListener("click", onVirtualKey);
+      b.addEventListener("contextmenu", onVirtualKeyRightClick);
+      b.addEventListener("touchstart", onVirtualKeyTouchStart, { passive: false });
+      b.addEventListener("touchend", onVirtualKeyTouchEnd, { passive: false });
+      b.addEventListener("touchmove", onVirtualKeyTouchCancel, { passive: false });
+      b.addEventListener("touchcancel", onVirtualKeyTouchCancel, { passive: false });
       row.appendChild(b);
     });
     kb.appendChild(row);
@@ -395,7 +405,7 @@ function resetGame(){
 
   // Limpa estado interno do teclado
   colorKeyboard.clear();
-  $$(".key").forEach(key => key.classList.remove("dark", "present", "correct"));
+  $$(".key").forEach(key => key.classList.remove("dark", "present", "correct", "manual-off"));
 
   updateInfo();
 }
@@ -409,8 +419,54 @@ function updateInfo(){
 
 /* ===================== ENTRADA ===================== */
 function onVirtualKey(e){
+  if(e.currentTarget.dataset.suppressClick === "1"){
+    e.currentTarget.dataset.suppressClick = "0";
+    return;
+  }
+  if(e.currentTarget.classList.contains("manual-off")) return;
   const k = e.currentTarget.dataset.key;
   handleKey(k);
+}
+function onVirtualKeyRightClick(e){
+  e.preventDefault();
+  toggleManualKeyState(e.currentTarget);
+}
+function onVirtualKeyTouchStart(e){
+  const btn = e.currentTarget;
+  clearTimeout(btn._longPressTimer);
+  btn._longPressTriggered = false;
+  btn._longPressTimer = setTimeout(() => {
+    btn._longPressTriggered = true;
+    btn.dataset.suppressClick = "1";
+    toggleManualKeyState(btn);
+  }, KEY_LONG_PRESS_MS);
+}
+function onVirtualKeyTouchEnd(e){
+  const btn = e.currentTarget;
+  clearTimeout(btn._longPressTimer);
+  if(btn._longPressTriggered){
+    e.preventDefault();
+  }
+  btn._longPressTriggered = false;
+}
+function onVirtualKeyTouchCancel(e){
+  const btn = e.currentTarget;
+  clearTimeout(btn._longPressTimer);
+  btn._longPressTriggered = false;
+}
+function toggleManualKeyState(btn){
+  if(gameOver) return false;
+
+  const key = btn.dataset.key;
+
+  // Apenas letras podem ser alternadas manualmente.
+  if(!key || key.length !== 1 || !isAlphaPt(key)) return false;
+
+  // Letras já bloqueadas pelo jogo (ausentes) não podem ser alternadas.
+  if(colorKeyboard.get(key) === "absent") return false;
+
+  btn.classList.toggle("manual-off");
+  return true;
 }
 function handleKey(k){
   if(gameOver) return;
@@ -542,7 +598,7 @@ const RULES = {
     "RR",
     "SS"
   ],
-  "maxConsonantsInRow": 2,
+  "maxConsonantsInRow": "3",
   "forbiddenStart": [
     "BN",
     "BT",
@@ -783,7 +839,7 @@ function updateKeyboardKey(letter, state){
   if(colorPriority[state] >= colorPriority[prev]){
     colorKeyboard.set(letter, state);
     if(keyBtn){
-      keyBtn.classList.remove("dark","present","correct");
+      keyBtn.classList.remove("dark","present","correct","manual-off");
       if(state === "absent") keyBtn.classList.add("dark");
       if(state === "present") keyBtn.classList.add("present");
       if(state === "correct") keyBtn.classList.add("correct");
