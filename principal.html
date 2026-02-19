@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>Mini Termo — 5 letras, 6 tentativas</title>
+<title>TermAPK</title>
 <style>
   :root{
     --bg: #121213;
@@ -85,7 +85,6 @@
     display:flex;
     flex-direction:column;
     align-items:center;
-    padding:16px;
     gap:16px;
   }
 
@@ -98,17 +97,15 @@
     margin-top:8px;
     touch-action:manipulation;
   }
-  @media (max-width:420px){
-    .board{ grid-template-columns: repeat(var(--cols,5), minmax(0, 48px)); grid-auto-rows:48px; gap:6px;}
-  }
   .tile{
     border:2px solid var(--border);
+    border-radius:10px;
     display:flex;
     align-items:center;
     justify-content:center;
     text-transform:uppercase;
     font-weight:800;
-    font-size:1.3rem;
+    font-size:2.0rem;
     user-select:none;
     background:transparent;
     color:var(--text);
@@ -168,6 +165,17 @@
   .key.dark{ background:var(--absent); color:#fff; }
   .key.present{ background:var(--present); color:#fff; }
   .key.correct{ background:var(--correct); color:#fff; }
+
+  @media (max-width:600px){
+    .keyboard{ gap:4px; max-width:400px; }
+    .row{ gap:4px; }
+    .key{
+      padding:12px 6px;
+      min-width:24px;
+    }
+    .key.big{ min-width:calc(56px * 0.95); }
+    .board{ grid-template-columns: repeat(var(--cols,5), minmax(0, 48px)); grid-auto-rows:48px; gap:6px;}
+  }
 
   /* Toast / Modal */
   .toast{
@@ -234,7 +242,32 @@ const MAX_TRIES = 6;
 /* Lista de palavras (sem acento, todas com 5 letras).
    Dica: adicione mais para ampliar o vocabulário. */
 const WORDS = [
-  "AMIGO","AMORA"
+  "AMIGO","AMORA","ANEIS","CACAO","CAFES","CARRO","CASAL","CASAR","CASAS",
+  "CASCA","CASCO","CERTO","CLARO","CORPO","DEVER","DENTE","ERROS","ERRAR",
+  "FALAR","FESTA","FRUTA","GATOS","GOLPE","JOGAR","JOGOS","LIVRO","LONGE",
+  "LUGAR","MAGIA","MELAO","MUNDO","NAVIO","NOITE","NINJA","NUVEM","OUVIR",
+  "PEDRA","PERNA","PERTO","PONTE","PONTO","PRAIA","PRACA","PRAZO","PRETO",
+  "RISCO","SALAS","SALTO","SANTO","SENTI","TERMO","TEMPO","TERRA","TIGRE",
+  "TORRE","TRIGO","VALOR","VERBO","VERDE","VINHO","VIVER","ZEBRA","NOCHE",
+  "BRISA","BRASA","CLUBE","DADOS","DANCA","FOSSA","GRUPO","IDEIA","NIVEL",
+  "PLANO","POETA","RAMOS","RENDA","ROSTO","RUINS","SINAL","SONHO","TEXTO",
+  "RUELA","PISCA","DIQUE","AGORA","AINDA","ANTES","APOIO","AREIA","ARROZ",
+  "ATRAS","BAIXO","BANHO","BATER","BEBER","BEIJO","BICHO","BOLSA","BOMBA",
+  "BOTAR","BRAVO","CABER","CALMA","CALOR","CAMPO","CANTO","CAPAZ","CARTA",
+  "CERCA","CHAVE","CHEIO","CHUVA","CICLO","CINTO","COISA","COMER","COMUM",
+  "CORDA","CULPA","CURSO","DIZER","DURAR","ENTRA","ENVIO","ESTAR","FALTA",
+  "FAROL","FEIRA","FELIZ","FICAR","FILHO","FINAL","FOCAR","FORMA","FORTE",
+  "FOTOS","FRASE","FREIO","FUNDO","GANHO","GENTE","GERAL","HOMEM","HOTEL",
+  "IGUAL","IDADE","IMPAR","JOVEM","JUNTO","LADOS","LENTO","LETRA","LIMPO",
+  "LINHA","LOCAL","LOUCO","LUCRO","LUTAR","MAIOR","MARCA","MENOR","MESMO",
+  "METRO","MINHA","MORAR","MUITO","NOBRE","NORTE","NOSSA","NOVOS","NUNCA",
+  "OLHAR","ONTEM","ORDEM","OUTRO","PAGAR","PALCO","PAPEL","PARAR","PARTE",
+  "PASSO","PAUSA","PEDIR","PEIXE","PENSA","PERDA","PODER","PORTE","POSSO",
+  "PRECO","PRIMO","PROVA","QUASE","QUERO","RAPAZ","RAZAO","REINO","SABER",
+  "SAIDA","SALDO","SENHA","SERIE","SOBRA","SORTE","SUBIR","SUAVE","TANTO",
+  "TARDE","TEMER","TENHO","TENTA","TERNO","TIRAR","TODOS","TOMAR","TORNA",
+  "TRAGO","TRAJE","TRATO","TREVO","TROCA","UNIAO","UNIDO","VALER","VELHO",
+  "VENDA","VENHO","VESTE","VIOLA","VIRAR","VISTA","VOLTA"
 ];
 
 // Subconjunto de soluções (pode ser a própria lista).
@@ -498,7 +531,12 @@ const RULES = {
   "qMustHaveU": true,
   "forbiddenSequences": [
     "NP",
-    "NB"
+    "NB",
+    "FC",
+    "TC",
+    "MN",
+    "PF",
+    "VC"
   ],
   "allowedDouble": [
     "RR",
@@ -513,7 +551,6 @@ const RULES = {
     "FN",
     "GN",
     "KT",
-    "PT",
     "TM",
     "VT",
     "ZX",
@@ -521,7 +558,8 @@ const RULES = {
     "DV",
     "TM",
     "BD",
-    "PT"
+    "PT",
+    "MP"
   ],
   "forbiddenEnd": [
     "H",
@@ -539,7 +577,9 @@ const RULES = {
   ],
   "bannedWords": [
     "JANJA",
-    "CROTE"
+    "CROTE",
+    "FRACI",
+    "LISSO"
   ]
 };
 
