@@ -75,6 +75,10 @@
     border-color: var(--accent);
     box-shadow: 0 0 0 2px var(--accent) inset;
   }
+  .tile.disabled {
+    opacity: 0.3; /* visual apagado */
+    pointer-events: none; /* não clicável */
+  }
   main{
     width:100%;
     max-width:560px;
@@ -230,16 +234,7 @@ const MAX_TRIES = 6;
 /* Lista de palavras (sem acento, todas com 5 letras).
    Dica: adicione mais para ampliar o vocabulário. */
 const WORDS = [
-  "AMIGO","AMORA","ANEIS","CACAO","CAFES","CARRO","CASAL","CASAR","CASAS",
-  "CASCA","CASCO","CERTO","CLARO","CORPO","DEVER","DENTE","ERROS","ERRAR",
-  "FALAR","FESTA","FRUTA","GATOS","GOLPE","JOGAR","JOGOS","LIVRO","LONGE",
-  "LUGAR","MAGIA","MELAO","MUNDO","NAVIO","NOITE","NINJA","NUVEM","OUVIR",
-  "PEDRA","PERNA","PERTO","PONTE","PONTO","PRAIA","PRACA","PRAZO","PRETO",
-  "RISCO","SALAS","SALTO","SANTO","SENTI","TERMO","TEMPO","TERRA","TIGRE",
-  "TORRE","TRIGO","VALOR","VERBO","VERDE","VINHO","VIVER","ZEBRA","NOCHE",
-  "BRISA","BRASA","CLUBE","DADOS","DANCA","FOSSA","GRUPO","IDEIA","NIVEL",
-  "PLANO","POETA","RAMOS","RENDA","ROSTO","RUINS","SINAL","SONHO","TEXTO",
-  "RUELA","PISCA","DIQUE"
+  "AMIGO","AMORA"
 ];
 
 // Subconjunto de soluções (pode ser a própria lista).
@@ -296,28 +291,31 @@ function pickSolution(){
   solutionN = normalize(solution).toUpperCase();
 }
 
-function buildBoard() {
+function buildBoard(){
   const board = $("#board");
   board.innerHTML = "";
   grid = [];
-  for (let r = 0; r < MAX_TRIES; r++) {
+  for(let r=0; r<MAX_TRIES; r++){
     const row = [];
-    for (let c = 0; c < WORD_LENGTH; c++) {
+    for(let c=0; c<WORD_LENGTH; c++){
       const d = document.createElement("div");
       d.className = "tile";
+
+      // 🔹 desativa linhas que ainda não chegaram
+      if(r > currentRow) d.classList.add("disabled");
+
       d.dataset.row = r;
       d.dataset.col = c;
 
-      // Clique ativa o cursor sempre
       d.addEventListener("click", () => {
         if (gameOver) return;
-        currentRow = r;
+        if (r !== currentRow) return; // só permite linha atual
         currentCol = c;
-        cursorActive = true;  // ativa o cursor
+        cursorActive = true;
         updateCursor();
       });
 
-      d.setAttribute("aria-label", `Letra ${c + 1} da tentativa ${r + 1}`);
+      d.setAttribute("aria-label",`Letra ${c+1} da tentativa ${r+1}`);
       board.appendChild(d);
       row.push(d);
     }
@@ -353,21 +351,20 @@ function buildKeyboard(){
 function resetGame(){
   currentRow = 0;
   currentCol = 0;
+  cursorActive = true;
   gameOver = false;
 
   pickSolution();
-  buildBoard();
+  buildBoard(); // cria grid e tiles
 
-  // Limpa estado interno
+  updateActiveRowVisual(); // agora grid existe
+  updateCursor();           // agora o cursor pode ser aplicado
+
+  // Limpa estado interno do teclado
   colorKeyboard.clear();
-
-  // 🔹 Limpa cores visuais do teclado
-  $$(".key").forEach(key => {
-    key.classList.remove("dark", "present", "correct");
-  });
+  $$(".key").forEach(key => key.classList.remove("dark", "present", "correct"));
 
   updateInfo();
-  updateCursor();
 }
 
 function updateInfo(){
@@ -654,6 +651,18 @@ function updateCursor() {
   }
 }
 
+function updateActiveRowVisual() {
+  grid.forEach((row, r) => {
+    row.forEach(tile => {
+      if(r === currentRow){
+        tile.classList.remove("disabled");
+      } else if(r > currentRow){
+        tile.classList.add("disabled");
+      }
+    });
+  });
+}
+
 function getCurrentGuess(){
   return grid[currentRow]
     .map(tile => tile.textContent || "")
@@ -676,21 +685,31 @@ function submitGuess() {
   const outcome = evaluate(guess, solution);
   revealRow(currentRow, outcome);
 
-  const win = outcome.every(s => s === "correct");
-  if (win) {
-    endGame(true, currentRow + 1);
-    return;
-  }
+  // tempo total da animação
+  const revealTime = WORD_LENGTH * 260 + 150;
 
-  // Palavra enviada com sucesso, prepara a próxima linha
-  currentRow++;
-  currentCol = 0;
-  cursorActive = true;  // cursor ativado novamente na primeira letra
-  if (currentRow >= MAX_TRIES) {
-    endGame(false, MAX_TRIES);
-  }
+  setTimeout(() => {
+    const win = outcome.every(s => s === "correct");
 
-  updateCursor();
+    if (win) {
+      endGame(true, currentRow + 1);
+      return;
+    }
+
+    // Se passou do limite de tentativas, derrota
+    if (currentRow >= MAX_TRIES - 1) {
+      endGame(false, MAX_TRIES);
+      return;
+    }
+
+    // Próxima linha apenas se ainda houver tentativas
+    currentRow++;
+    currentCol = 0;
+    updateActiveRowVisual();
+    cursorActive = true;
+    updateCursor();
+
+  }, revealTime);
 }
 
 function revealRow(rowIdx, outcome){
