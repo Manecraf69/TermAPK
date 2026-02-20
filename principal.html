@@ -1,4 +1,4 @@
-<!doctype html>
+﻿<!doctype html>
 <html lang="pt-BR">
 <head>
 <meta charset="utf-8" />
@@ -32,6 +32,12 @@
   }
   *{box-sizing:border-box}
   html, body{height:100%}
+  html, body, main, .board, .keyboard, .row, .tile, .key, .toast, dialog{
+    user-select:none;
+    -webkit-user-select:none;
+    -ms-user-select:none;
+    -webkit-touch-callout:none;
+  }
   body{
     margin:0;
     font-family: system-ui, -apple-system, Segoe UI, Roboto, Ubuntu, Cantarell, "Helvetica Neue", Arial, "Noto Sans", "Apple Color Emoji","Segoe UI Emoji","Segoe UI Symbol","Noto Color Emoji";
@@ -81,11 +87,78 @@
   }
   main{
     width:100%;
-    max-width:560px;
+    max-width:980px;
     display:flex;
     flex-direction:column;
     align-items:center;
     gap:16px;
+  }
+  .topbar{
+    width:100%;
+    max-width:560px;
+    display:flex;
+    justify-content:flex-end;
+    padding-top:8px;
+  }
+  .boards-wrap{
+    width:100%;
+    display:grid;
+    gap:12px;
+    align-items:start;
+    justify-content:center;
+  }
+  .boards-wrap.solo{
+    grid-template-columns: 1fr;
+  }
+  .boards-wrap.dueto{
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    max-width:460px;
+  }
+  .boards-wrap.quarteto{
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    max-width:980px;
+    gap:10px;
+  }
+  .boards-wrap.dueto .board{
+    grid-template-columns: repeat(var(--cols,5), minmax(0, 40px));
+    grid-auto-rows:40px;
+    gap:5px;
+    margin-top:0;
+  }
+  .boards-wrap.quarteto .board{
+    grid-template-columns: repeat(var(--cols,5), minmax(0, 30px));
+    grid-auto-rows:30px;
+    gap:3px;
+    margin-top:0;
+  }
+  .boards-wrap.dueto .tile{
+    border-radius:8px;
+    font-size:1.45rem;
+  }
+  .boards-wrap.quarteto .tile{
+    border-radius:7px;
+    font-size:1rem;
+  }
+  .boards-wrap.mode-transition{
+    animation: modeSwitch .24s ease;
+  }
+  .board-shell{
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+    gap:6px;
+    width:100%;
+  }
+  .board-title{
+    font-size:.8rem;
+    opacity:.85;
+    letter-spacing:.08em;
+    text-transform:uppercase;
+    font-weight:700;
+    min-height:1.1rem;
+  }
+  .boards-wrap.solo .board-title{
+    visibility:hidden;
   }
 
   /* Grade */
@@ -109,6 +182,10 @@
     user-select:none;
     background:transparent;
     color:var(--text);
+    cursor:default;
+  }
+  .tile.clickable{
+    cursor:pointer;
   }
   .tile.filled{ border-color:#9aa0a6; }
   .tile.absent{ background:var(--absent); border-color:var(--absent); color:#fff;}
@@ -181,6 +258,13 @@
   .key.keyflash-error{
     animation: keyflashError .26s ease;
   }
+  .key .key-symbol{
+    display:inline-block;
+    transition: transform .18s ease;
+  }
+  .key.keyflip-delete .key-symbol{
+    transform: rotate(180deg);
+  }
   @keyframes keyflash{
     0%{
       background:var(--kbd-bg);
@@ -216,7 +300,16 @@
     }
   }
 
+  @keyframes modeSwitch{
+    0%{ opacity:.35; transform:scale(.985); }
+    100%{ opacity:1; transform:scale(1); }
+  }
+
   @media (max-width:600px){
+    .topbar{
+      max-width:400px;
+      padding-top:4px;
+    }
     .keyboard{ gap:4px; max-width:400px; }
     .row{ gap:4px; }
     .key{
@@ -225,6 +318,31 @@
     }
     .key.big{ min-width:calc(56px * 0.95); }
     .board{ grid-template-columns: repeat(var(--cols,5), minmax(0, 48px)); grid-auto-rows:48px; gap:6px;}
+    .boards-wrap.dueto{
+      grid-template-columns: 1fr;
+      max-width:400px;
+    }
+    .boards-wrap.quarteto{
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      max-width:400px;
+      gap:10px;
+    }
+    .boards-wrap.dueto .board{
+      grid-template-columns: repeat(var(--cols,5), minmax(0, 44px));
+      grid-auto-rows:44px;
+      gap:6px;
+    }
+    .boards-wrap.dueto .tile{
+      font-size:1.6rem;
+    }
+    .boards-wrap.quarteto .board{
+      grid-template-columns: repeat(var(--cols,5), minmax(0, 34px));
+      grid-auto-rows:34px;
+      gap:4px;
+    }
+    .boards-wrap.quarteto .tile{
+      font-size:1.2rem;
+    }
   }
 
   /* Toast / Modal */
@@ -263,7 +381,13 @@
 </head>
 <body>
   <main>
-    <div id="board" class="board" style="--cols:5;"></div>
+    <div class="topbar">
+      <button class="btn" id="btnMode">Modo: Normal</button>
+    </div>
+
+    <div id="boardsWrap" class="boards-wrap solo">
+      <div id="board" class="board" style="--cols:5;"></div>
+    </div>
 
     <div class="keyboard" id="keyboard"></div>
   </main>
@@ -288,7 +412,14 @@
 /* ===================== CONFIGURAÇÃO ===================== */
 const WORD_LENGTH = 5;
 const MAX_TRIES = 6;
+const DUETO_TRIES = 7;
+const QUARTETO_TRIES = 9;
 const KEY_LONG_PRESS_MS = 500;
+const GAME_MODES = {
+  solo: { label: "Normal", boards: 1, tries: MAX_TRIES },
+  dueto: { label: "Dueto", boards: 2, tries: DUETO_TRIES },
+  quarteto: { label: "Quarteto", boards: 4, tries: QUARTETO_TRIES }
+};
 
 /* Lista de palavras (sem acento, todas com 5 letras).
    Dica: adicione mais para ampliar o vocabulário. */
@@ -352,12 +483,23 @@ function flashKey(k, mode="normal"){
     $(`.key[data-key="${raw}"]`) ||
     $(`.key[data-key="${upper}"]`);
   if(!btn) return;
+  clearTimeout(btn._flashTimer);
   btn.classList.remove("keyflash", "keyflash-error");
   // reinicia a animação mesmo em toques rápidos sucessivos
   void btn.offsetWidth;
   const cls = mode === "error" ? "keyflash-error" : "keyflash";
   btn.classList.add(cls);
-  setTimeout(()=> btn.classList.remove("keyflash", "keyflash-error"), 280);
+  btn._flashTimer = setTimeout(()=> btn.classList.remove("keyflash", "keyflash-error"), 280);
+}
+
+function flipBackspaceSymbol(){
+  const btn = $('.key[data-key="Backspace"]');
+  if(!btn) return;
+  clearTimeout(btn._flipTimer);
+  btn.classList.remove("keyflip-delete");
+  void btn.offsetWidth;
+  btn.classList.add("keyflip-delete");
+  btn._flipTimer = setTimeout(()=> btn.classList.remove("keyflip-delete"), 220);
 }
 
 function isDiscardedLetter(k){
@@ -369,10 +511,10 @@ function isDiscardedLetter(k){
 /* ===================== ESTADO ===================== */
 let currentRow = 0;
 let currentCol = 0;
-let grid = []; // [ [tiles...], ... ]
-let solution = "";     // forma mostrada (pode ter acento se quiser no futuro)
-let solutionN = "";    // normalizada (sem acento) para comparação
+let boardsState = []; // [{ el, grid, solution, solved }]
 let gameOver = false;
+let inputLocked = false;
+let currentMode = "solo";
 
 const stats = {
   games: 0,
@@ -391,41 +533,112 @@ function saveStats(){
 }
 
 /* ===================== INICIALIZAÇÃO ===================== */
+function modeCfg(){
+  return GAME_MODES[currentMode];
+}
+function getMaxTries(){
+  return modeCfg().tries;
+}
 function pickSolution(){
   const idx = Math.floor(Math.random() * SOLUTIONS.length);
-  solution = SOLUTIONS[idx].toUpperCase();
-  solutionN = normalize(solution).toUpperCase();
+  return SOLUTIONS[idx].toUpperCase();
 }
+function updateModeButton(){
+  const btn = $("#btnMode");
+  if(!btn) return;
+  btn.textContent = `Modo: ${modeCfg().label}`;
+}
+function applyModeVisual(){
+  const wrap = $("#boardsWrap");
+  if(!wrap) return;
+  wrap.classList.remove("solo", "dueto", "quarteto");
+  wrap.classList.add(currentMode);
+}
+function triggerModeTransition(){
+  const wrap = $("#boardsWrap");
+  if(!wrap) return;
+  wrap.classList.remove("mode-transition");
+  void wrap.offsetWidth;
+  wrap.classList.add("mode-transition");
+  clearTimeout(wrap._modeTimer);
+  wrap._modeTimer = setTimeout(() => wrap.classList.remove("mode-transition"), 260);
+}
+function setMode(mode){
+  if(!GAME_MODES[mode] || mode === currentMode) return;
+  const dlg = $("#dlgEnd");
+  if(dlg?.open) dlg.close();
+  currentMode = mode;
+  triggerModeTransition();
+  resetGame();
+}
+function toggleMode(){
+  if(inputLocked) return;
+  const order = ["solo", "dueto", "quarteto"];
+  const idx = order.indexOf(currentMode);
+  const next = order[(idx + 1) % order.length];
+  setMode(next);
+}
+function buildBoards(){
+  const wrap = $("#boardsWrap");
+  wrap.innerHTML = "";
+  boardsState = [];
+  applyModeVisual();
 
-function buildBoard(){
-  const board = $("#board");
-  board.innerHTML = "";
-  grid = [];
-  for(let r=0; r<MAX_TRIES; r++){
-    const row = [];
-    for(let c=0; c<WORD_LENGTH; c++){
-      const d = document.createElement("div");
-      d.className = "tile";
+  const count = modeCfg().boards;
+  const used = new Set();
+  for(let b=0; b<count; b++){
+    const shell = document.createElement("div");
+    shell.className = "board-shell";
 
-      // 🔹 desativa linhas que ainda não chegaram
-      if(r > currentRow) d.classList.add("disabled");
+    const title = document.createElement("div");
+    title.className = "board-title";
+    title.textContent = `Palavra ${b + 1}`;
+    shell.appendChild(title);
 
-      d.dataset.row = r;
-      d.dataset.col = c;
+    const board = document.createElement("div");
+    board.className = "board";
+    board.style.setProperty("--cols", WORD_LENGTH);
+    shell.appendChild(board);
+    wrap.appendChild(shell);
 
-      d.addEventListener("click", () => {
-        if (gameOver) return;
-        if (r !== currentRow) return; // só permite linha atual
-        currentCol = c;
-        cursorActive = true;
-        updateCursor();
-      });
+    const boardState = {
+      el: board,
+      grid: [],
+      solution: "",
+      solved: false,
+      revealed: []
+    };
 
-      d.setAttribute("aria-label",`Letra ${c+1} da tentativa ${r+1}`);
-      board.appendChild(d);
-      row.push(d);
+    for(let r=0; r<getMaxTries(); r++){
+      const row = [];
+      for(let c=0; c<WORD_LENGTH; c++){
+        const d = document.createElement("div");
+        d.className = "tile";
+        if(r > currentRow) d.classList.add("disabled");
+        d.dataset.row = r;
+        d.dataset.col = c;
+        d.dataset.board = b;
+        d.addEventListener("click", () => {
+          if(gameOver || inputLocked || boardState.solved) return;
+          if(r !== currentRow) return;
+          currentCol = c;
+          cursorActive = true;
+          updateCursor();
+        });
+        d.setAttribute("aria-label",`Letra ${c+1} da tentativa ${r+1}`);
+        board.appendChild(d);
+        row.push(d);
+      }
+      boardState.grid.push(row);
     }
-    grid.push(row);
+
+    let chosen = pickSolution();
+    while(used.has(chosen) && used.size < SOLUTIONS.length){
+      chosen = pickSolution();
+    }
+    used.add(chosen);
+    boardState.solution = chosen;
+    boardsState.push(boardState);
   }
 }
 
@@ -444,7 +657,11 @@ function buildKeyboard(){
     letters.forEach(key=>{
       const b = document.createElement("button");
       b.className = "key";
-      b.textContent = key === "Backspace" ? "⌫" : key;
+      if(key === "Backspace"){
+        b.innerHTML = '<span class="key-symbol">⌫</span>';
+      }else{
+        b.textContent = key;
+      }
       if(key === "Enter" || key === "Backspace") b.classList.add("big");
       b.dataset.key = key;
       b.addEventListener("click", onVirtualKey);
@@ -464,12 +681,13 @@ function resetGame(){
   currentCol = 0;
   cursorActive = true;
   gameOver = false;
+  inputLocked = false;
 
-  pickSolution();
-  buildBoard(); // cria grid e tiles
+  buildBoards();
+  updateModeButton();
 
-  updateActiveRowVisual(); // agora grid existe
-  updateCursor();           // agora o cursor pode ser aplicado
+  updateActiveRowVisual();
+  updateCursor();
 
   // Limpa estado interno do teclado
   colorKeyboard.clear();
@@ -480,8 +698,9 @@ function resetGame(){
 
 function updateInfo(){
   const info = $("#info");
+  if(!info) return;
   if(!gameOver){
-    info.innerHTML = `Acerte a palavra de <b>${WORD_LENGTH}</b> letras em até <b>${MAX_TRIES}</b> tentativas.`;
+    info.innerHTML = `Acerte ${modeCfg().boards === 2 ? "as duas palavras" : "a palavra"} de <b>${WORD_LENGTH}</b> letras em até <b>${getMaxTries()}</b> tentativas.`;
   }
 }
 
@@ -540,7 +759,7 @@ function toggleManualKeyState(btn){
   return true;
 }
 function handleKey(k){
-  if(gameOver) return;
+  if(gameOver || inputLocked) return;
 
   if(k === "Enter"){
     submitGuess();
@@ -559,21 +778,30 @@ function handleKey(k){
   }
 }
 
-function addLetter(ch) {
-  if (!cursorActive) return;
+function getPlayableBoards(){
+  return boardsState.filter(b => !b.solved);
+}
 
-  // Coloca a letra no tile atual
-  const tile = grid[currentRow][currentCol];
-  tile.textContent = ch.toUpperCase();
-  tile.classList.add("filled","pop");
-  setTimeout(()=> tile.classList.remove("pop"), 80);
+function addLetter(ch) {
+  if(inputLocked || !cursorActive) return;
+  const rowBoards = getPlayableBoards();
+  if(rowBoards.length === 0) return;
+
+  rowBoards.forEach(board => {
+    const tile = board.grid[currentRow]?.[currentCol];
+    if(!tile) return;
+    tile.textContent = ch.toUpperCase();
+    tile.classList.add("filled","pop");
+    setTimeout(()=> tile.classList.remove("pop"), 80);
+  });
 
   // Procura o próximo tile vazio à direita
-  let nextCol = grid[currentRow].findIndex((t, i) => i > currentCol && !t.textContent);
+  const row = rowBoards[0].grid[currentRow] || [];
+  let nextCol = row.findIndex((t, i) => i > currentCol && !t.textContent);
 
   // Se não encontrou à direita, procura da esquerda para a direita
   if (nextCol === -1) {
-    nextCol = grid[currentRow].findIndex(t => !t.textContent);
+    nextCol = row.findIndex(t => !t.textContent);
   }
 
   // Atualiza currentCol ou desativa cursor se não houver nenhum vazio
@@ -588,6 +816,9 @@ function addLetter(ch) {
 }
 
 function backspace() {
+  if(inputLocked) return;
+  const rowBoards = getPlayableBoards();
+  if(rowBoards.length === 0) return;
   // se o cursor está desativado, reativa antes
   if(!cursorActive) {
     cursorActive = true;
@@ -595,22 +826,33 @@ function backspace() {
     currentCol = WORD_LENGTH - 1;
   }
 
-  const tile = grid[currentRow][currentCol];
+  const tile = rowBoards[0].grid[currentRow]?.[currentCol];
+  if(!tile) return;
 
   if (tile.textContent) {
-    tile.textContent = "";
-    tile.classList.remove("filled");
+    rowBoards.forEach(board => {
+      const t = board.grid[currentRow]?.[currentCol];
+      if(!t) return;
+      t.textContent = "";
+      t.classList.remove("filled");
+    });
   } else if (currentCol > 0) {
     currentCol--;
-    const prevTile = grid[currentRow][currentCol];
-    prevTile.textContent = "";
-    prevTile.classList.remove("filled");
+    rowBoards.forEach(board => {
+      const prevTile = board.grid[currentRow]?.[currentCol];
+      if(!prevTile) return;
+      prevTile.textContent = "";
+      prevTile.classList.remove("filled");
+    });
   }
 
   updateCursor();
 }
 
 function deleteLetter() {
+  if(inputLocked) return;
+  const rowBoards = getPlayableBoards();
+  if(rowBoards.length === 0) return;
   // se o cursor está desativado, reativa antes
   if (!cursorActive) {
     cursorActive = true;
@@ -618,18 +860,26 @@ function deleteLetter() {
     currentCol = 0;
   }
 
-  const tile = grid[currentRow][currentCol];
+  const tile = rowBoards[0].grid[currentRow]?.[currentCol];
+  if(!tile) return;
 
   if (tile.textContent) {
     // apaga a letra do tile atual
-    tile.textContent = "";
-    tile.classList.remove("filled");
+    rowBoards.forEach(board => {
+      const t = board.grid[currentRow]?.[currentCol];
+      if(!t) return;
+      t.textContent = "";
+      t.classList.remove("filled");
+    });
   } else if (currentCol < WORD_LENGTH - 1) {
     // move para frente e apaga o próximo tile
     currentCol++;
-    const nextTile = grid[currentRow][currentCol];
-    nextTile.textContent = "";
-    nextTile.classList.remove("filled");
+    rowBoards.forEach(board => {
+      const nextTile = board.grid[currentRow]?.[currentCol];
+      if(!nextTile) return;
+      nextTile.textContent = "";
+      nextTile.classList.remove("filled");
+    });
   }
 
   updateCursor();
@@ -800,31 +1050,43 @@ let cursorActive = true; // nova flag para controlar se o cursor está ativo
 
 function updateCursor() {
   $$(".tile").forEach(t => t.classList.remove("cursor"));
-  if(cursorActive) {
-    const tile = grid[currentRow][currentCol];
+  if(!cursorActive) return;
+  getPlayableBoards().forEach(board => {
+    const tile = board.grid[currentRow]?.[currentCol];
     if(tile) tile.classList.add("cursor");
-  }
+  });
 }
 
 function updateActiveRowVisual() {
-  grid.forEach((row, r) => {
-    row.forEach(tile => {
-      if(r === currentRow){
-        tile.classList.remove("disabled");
-      } else if(r > currentRow){
-        tile.classList.add("disabled");
-      }
+  boardsState.forEach(board => {
+    board.grid.forEach((row, r) => {
+      row.forEach(tile => {
+        tile.classList.remove("clickable");
+        if(board.solved){
+          tile.classList.add("disabled");
+          return;
+        }
+        if(r === currentRow){
+          tile.classList.remove("disabled");
+          tile.classList.add("clickable");
+        } else if(r > currentRow){
+          tile.classList.add("disabled");
+        } else {
+          tile.classList.remove("disabled");
+        }
+      });
     });
   });
 }
 
 function getCurrentGuess(){
-  return grid[currentRow]
-    .map(tile => tile.textContent || "")
-    .join("");
+  const sourceBoard = getPlayableBoards()[0] || boardsState[0];
+  if(!sourceBoard) return "";
+  return (sourceBoard.grid[currentRow] || []).map(tile => tile.textContent || "").join("");
 }
 
 function submitGuess() {
+  if(inputLocked) return;
   const guess = getCurrentGuess();
   if (guess.length < WORD_LENGTH) {
     flashKey("Enter", "error");
@@ -840,24 +1102,35 @@ function submitGuess() {
   }
 
   flashKey("Enter", "normal");
-  const outcome = evaluate(guess, solution);
-  revealRow(currentRow, outcome);
+  inputLocked = true;
+  const evaluations = getPlayableBoards().map(board => {
+    const outcome = evaluate(guess, board.solution);
+    board.revealed.push({ guess, outcome: [...outcome] });
+    revealRow(board, currentRow, outcome);
+    return { board, outcome };
+  });
 
   // tempo total da animação
   const revealTime = WORD_LENGTH * 260 + 150;
 
   setTimeout(() => {
-    const win = outcome.every(s => s === "correct");
-
-    if (win) {
-      animateWinRow(currentRow);
+    evaluations.forEach(({ board, outcome }) => {
+      const solved = outcome.every(s => s === "correct");
+      if(solved){
+        board.solved = true;
+        animateWinRow(board, currentRow);
+      }
+    });
+    rebuildKeyboardFromActiveBoards();
+    const won = boardsState.length > 0 && boardsState.every(board => board.solved);
+    if (won) {
       setTimeout(() => endGame(true, currentRow + 1), WORD_LENGTH * 120 + 220);
       return;
     }
 
     // Se passou do limite de tentativas, derrota
-    if (currentRow >= MAX_TRIES - 1) {
-      endGame(false, MAX_TRIES);
+    if (currentRow >= getMaxTries() - 1) {
+      endGame(false, getMaxTries());
       return;
     }
 
@@ -866,13 +1139,14 @@ function submitGuess() {
     currentCol = 0;
     updateActiveRowVisual();
     cursorActive = true;
+    inputLocked = false;
     updateCursor();
 
   }, revealTime);
 }
 
-function animateWinRow(rowIdx){
-  const tiles = grid[rowIdx] || [];
+function animateWinRow(board, rowIdx){
+  const tiles = board.grid[rowIdx] || [];
   tiles.forEach((tile, i) => {
     setTimeout(() => {
       tile.classList.remove("winpop");
@@ -884,8 +1158,8 @@ function animateWinRow(rowIdx){
   });
 }
 
-function revealRow(rowIdx, outcome){
-  const tiles = grid[rowIdx];
+function revealRow(board, rowIdx, outcome){
+  const tiles = board.grid[rowIdx];
   // Revelar em sequência com flip
   outcome.forEach((state, i)=>{
     const tile = tiles[i];
@@ -902,17 +1176,20 @@ function revealRow(rowIdx, outcome){
 
 /* ===================== FEEDBACK / UI ===================== */
 function shakeRow(rowIdx){
-  const tiles = grid[rowIdx];
-  tiles.forEach(t => t.classList.add("shake"));
-  setTimeout(()=> tiles.forEach(t => t.classList.remove("shake")), 320);
+  getPlayableBoards().forEach(board => {
+    const tiles = board.grid[rowIdx] || [];
+    tiles.forEach(t => t.classList.add("shake"));
+    setTimeout(()=> tiles.forEach(t => t.classList.remove("shake")), 320);
+  });
 }
 
 const colorPriority = { "correct":3, "present":2, "absent":1 };
 const colorKeyboard = new Map();
-function updateKeyboardKey(letter, state){
+function paintKeyboardKey(letter, state){
   const keyBtn = $(`.key[data-key="${letter}"]`);
-  const prev = colorKeyboard.get(letter) || "absent";
-  if(colorPriority[state] >= colorPriority[prev]){
+  const prev = colorKeyboard.get(letter) || "none";
+  const prevPrio = colorPriority[prev] || 0;
+  if(colorPriority[state] >= prevPrio){
     colorKeyboard.set(letter, state);
     if(keyBtn){
       keyBtn.classList.remove("dark","present","correct","manual-off");
@@ -922,10 +1199,28 @@ function updateKeyboardKey(letter, state){
     }
   }
 }
+function updateKeyboardKey(letter, state){
+  paintKeyboardKey(letter, state);
+}
+function rebuildKeyboardFromActiveBoards(){
+  colorKeyboard.clear();
+  $$(".key").forEach(key => key.classList.remove("dark","present","correct"));
+  const sourceBoards = modeCfg().boards > 1 ? getPlayableBoards() : boardsState;
+  sourceBoards.forEach(board => {
+    board.revealed.forEach(({ guess, outcome }) => {
+      for(let i=0; i<WORD_LENGTH; i++){
+        const letter = (guess[i] || "").toUpperCase();
+        if(!letter) continue;
+        paintKeyboardKey(letter, outcome[i]);
+      }
+    });
+  });
+}
 
 /* ===================== FIM DE JOGO / ESTATÍSTICAS ===================== */
 function endGame(won, tries){
   gameOver = true;
+  inputLocked = false;
 
   stats.games++;
   if(won){
@@ -939,9 +1234,11 @@ function endGame(won, tries){
 
   const dlg = $("#dlgEnd");
   $("#endTitle").textContent = won ? "🎉 Parabéns!" : "💡 Boa tentativa!";
+  const answers = boardsState.map(b => b.solution).filter(Boolean);
+  const answersText = answers.length > 1 ? answers.join(" e ") : (answers[0] || "");
   $("#endMsg").innerHTML = won
     ? `Você acertou em <b>${tries}</b> ${tries===1 ? "tentativa" : "tentativas"}.`
-    : `A palavra era <b>${solution}</b>.`;
+    : `A${answers.length > 1 ? "s palavras eram" : " palavra era"} <b>${answersText}</b>.`;
 
   $("#stGames").textContent = stats.games;
   $("#stWins").textContent = stats.wins;
@@ -954,6 +1251,17 @@ function endGame(won, tries){
 /* ===================== EVENTOS ===================== */
 document.addEventListener("keydown", (e)=>{
   if(e.ctrlKey || e.metaKey || e.altKey) return;
+  if(inputLocked){
+    if(
+      e.key === "Enter" ||
+      e.key === "Backspace" ||
+      e.key === "Delete" ||
+      (e.key.length === 1 && isAlphaPt(e.key))
+    ){
+      e.preventDefault();
+    }
+    return;
+  }
   if(e.key === "Enter" || e.key === "Backspace"){
     if(e.key === "Backspace") flashKey(e.key);
     handleKey(e.key);
@@ -961,6 +1269,8 @@ document.addEventListener("keydown", (e)=>{
     return;
   }
   if(e.key === "Delete") {
+    flashKey("Backspace");
+    flipBackspaceSymbol();
     deleteLetter();
     e.preventDefault();
   }
@@ -974,8 +1284,12 @@ $("#btnAgain").addEventListener("click", ()=>{
   $("#dlgEnd").close();
   resetGame();
 });
+$("#btnMode").addEventListener("click", ()=>{
+  toggleMode();
+});
 document.addEventListener("keydown", (e) => {
   if(e.ctrlKey || e.metaKey || e.altKey) return;
+  if(inputLocked) return;
 
   // Movimentação com setas
   switch(e.key){
@@ -1023,6 +1337,14 @@ document.addEventListener("keydown", (e) => {
       e.preventDefault();
       return;
   }
+});
+
+// Bloqueia seleção/arraste de texto e elementos (desktop + mobile)
+document.addEventListener("selectstart", (e) => {
+  e.preventDefault();
+});
+document.addEventListener("dragstart", (e) => {
+  e.preventDefault();
 });
 
 /* ===================== START ===================== */
