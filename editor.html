@@ -95,11 +95,13 @@ input{
   </div>
 
   <div id="rules"></div>
+  <div id="wordsEditor"></div>
 </main>
 
 <script>
 let dirHandle, fileHandle;
 let RULES = {};
+let WORDS = [];
 
 async function openFolder(){
   dirHandle = await window.showDirectoryPicker();
@@ -112,7 +114,14 @@ async function openFolder(){
     alert("RULES não encontrado no principal.html");
     return;
   }
+  const wordsMatch = text.match(/const WORDS = (\[[\s\S]*?\]);/);
+  if(!wordsMatch){
+    alert("WORDS não encontrado no principal.html");
+    return;
+  }
+
   RULES = eval("(" + match[1] + ")");
+  WORDS = eval(wordsMatch[1]);
   render();
 }
 
@@ -127,6 +136,8 @@ function render(){
       renderSimpleRule(c, key, RULES[key]);
     }
   }
+
+  renderWordsEditor();
 }
 
 function renderSimpleRule(container, key, value){
@@ -156,22 +167,136 @@ function renderListRule(container, key, list){
       `).join("")}
     </div>
     <div class="add">
-      <input id="add-${key}" placeholder="Novo item">
+      <input id="add-${key}" placeholder="Novo item" onkeydown="handleAddInputKeydown(event,'${key}')">
       <button onclick="addItem('${key}')">Adicionar</button>
     </div>
   `;
   container.appendChild(d);
 }
 
-function addItem(key){
+function handleAddInputKeydown(e, key){
+  if(e.key !== "Enter") return;
+  e.preventDefault();
+  addItem(key, true);
+}
+
+function addItem(key, keepFocus=false){
   const i = document.getElementById("add-"+key);
-  if(!i.value) return;
-  RULES[key].push(i.value.toUpperCase());
+  if(!i) return;
+  const rawValue = i.value.trim();
+  if(!rawValue){
+    if(keepFocus) i.focus();
+    return;
+  }
+
+  const value = rawValue.toUpperCase();
+  const alreadyExists = RULES[key].some(v => String(v).toUpperCase() === value);
+  if(alreadyExists){
+    alert(`O item "${value}" já existe na regra ${key}.`);
+    if(keepFocus){
+      i.focus();
+      i.select();
+    }
+    return;
+  }
+
+  RULES[key].push(value);
   render();
+  if(keepFocus){
+    const nextInput = document.getElementById("add-"+key);
+    if(nextInput){
+      nextInput.focus();
+      nextInput.select();
+    }
+  }
 }
 
 function removeItem(key, index){
   RULES[key].splice(index,1);
+  render();
+}
+
+function renderWordsEditor(){
+  const container = document.getElementById("wordsEditor");
+  container.innerHTML = "";
+
+  const d = document.createElement("div");
+  d.className = "rule";
+  d.innerHTML = `
+    <h3>WORDS</h3>
+    <small>Lista de palavras editável (${WORDS.length} itens)</small>
+    <div class="items">
+      ${WORDS.map((w, i) => `
+        <div class="item">
+          <span>${w}</span>
+          <button onclick="removeWord(${i})">✕</button>
+        </div>
+      `).join("")}
+    </div>
+    <div class="add">
+      <input id="add-word" placeholder="Nova palavra" onkeydown="handleWordInputKeydown(event)">
+      <button onclick="addWord()">Adicionar palavra</button>
+    </div>
+  `;
+  container.appendChild(d);
+}
+
+function handleWordInputKeydown(e){
+  if(e.key !== "Enter") return;
+  e.preventDefault();
+  addWord(true);
+}
+
+function addWord(keepFocus=false){
+  const input = document.getElementById("add-word");
+  if(!input) return;
+
+  const rawValue = input.value.trim();
+  if(!rawValue){
+    if(keepFocus){
+      input.value = "";
+      input.focus();
+    }
+    return;
+  }
+
+  const word = rawValue.toUpperCase();
+  const exists = WORDS.some(w => String(w).toUpperCase() === word);
+  if(exists){
+    alert(`A palavra "${word}" já existe em WORDS.`);
+    if(keepFocus){
+      input.value = "";
+      input.focus();
+    }
+    return;
+  }
+
+  const validation = validateWord(word);
+  if(!validation.ok){
+    const reason = validation.errors
+      .map(e => `${e.rule}${e.item ? ` (${e.item})` : ""}: ${e.message}`)
+      .join("\n");
+    alert(`A palavra "${word}" não pode ser adicionada.\n\n${reason}`);
+    if(keepFocus){
+      input.value = "";
+      input.focus();
+    }
+    return;
+  }
+
+  WORDS.push(word);
+  render();
+  if(keepFocus){
+    const nextInput = document.getElementById("add-word");
+    if(nextInput){
+      nextInput.value = "";
+      nextInput.focus();
+    }
+  }
+}
+
+function removeWord(index){
+  WORDS.splice(index, 1);
   render();
 }
 
@@ -183,12 +308,16 @@ async function saveRules(){
     /const RULES = {[\s\S]*?};/,
     "const RULES = " + JSON.stringify(RULES,null,2) + ";"
   );
+  text = text.replace(
+    /const WORDS = \[[\s\S]*?\];/,
+    "const WORDS = " + JSON.stringify(WORDS,null,2) + ";"
+  );
 
   const w = await fileHandle.createWritable();
   await w.write(text);
   await w.close();
 
-  alert("Regras salvas com sucesso!");
+  alert("Regras e WORDS salvos com sucesso!");
 }
 
 function test(){
