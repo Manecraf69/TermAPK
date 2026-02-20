@@ -95,9 +95,9 @@
   }
   .topbar{
     width:100%;
-    max-width:560px;
+    max-width:360px;
     display:flex;
-    justify-content:flex-end;
+    justify-content:center;
     padding-top:8px;
   }
   .boards-wrap{
@@ -158,7 +158,10 @@
     min-height:1.1rem;
   }
   .boards-wrap.solo .board-title{
-    visibility:hidden;
+    display:none;
+  }
+  .boards-wrap.solo .board{
+    margin-top:10px;
   }
 
   /* Grade */
@@ -176,6 +179,8 @@
     display:flex;
     align-items:center;
     justify-content:center;
+    line-height:1;
+    padding-bottom:5px;
     text-transform:uppercase;
     font-weight:800;
     font-size:2.0rem;
@@ -237,14 +242,16 @@
     color:#000;
     border:0;
     border-radius:6px;
-    padding:12px 8px;
+    padding:7px;
     font-weight:700;
-    min-width:32px;
+    font-size: 20px;
+    min-width:60px;
+    max-height: 35px;
     cursor:pointer;
     user-select:none;
     text-transform:uppercase;
   }
-  .key.big{ min-width:56px; }
+  .key.big{ min-width:90px; }
   .key.dark{ background:var(--absent); color:#fff; }
   .key.present{ background:var(--present); color:#fff; }
   .key.correct{ background:var(--correct); color:#fff; }
@@ -260,6 +267,8 @@
   }
   .key .key-symbol{
     display:inline-block;
+    position:relative;
+    top:-4px;
     transition: transform .18s ease;
   }
   .key.keyflip-delete .key-symbol{
@@ -306,11 +315,18 @@
   }
 
   @media (max-width:600px){
+    .key{
+      padding:12px 8px;
+      min-width:32px;
+      font-size: 12px;
+    }
+    .key.big{ min-width:56px; }
+    main{max-width:360px;}
     .topbar{
-      max-width:400px;
+      max-width:360px;
       padding-top:4px;
     }
-    .keyboard{ gap:4px; max-width:400px; }
+    .keyboard{ gap:4px; max-width:360px; }
     .row{ gap:4px; }
     .key{
       padding:12px 6px;
@@ -320,11 +336,11 @@
     .board{ grid-template-columns: repeat(var(--cols,5), minmax(0, 48px)); grid-auto-rows:48px; gap:6px;}
     .boards-wrap.dueto{
       grid-template-columns: 1fr;
-      max-width:400px;
+      max-width:360px;
     }
     .boards-wrap.quarteto{
       grid-template-columns: repeat(2, minmax(0, 1fr));
-      max-width:400px;
+      max-width:360px;
       gap:10px;
     }
     .boards-wrap.dueto .board{
@@ -424,354 +440,50 @@ const GAME_MODES = {
 /* Lista de palavras (com e sem acento, todas com 5 letras),
    priorizando alta frequência no português brasileiro. */
 const WORDS = [
-  "AMIGO",
-  "AMORA",
-  "ANEIS",
-  "CACAO",
-  "CAFES",
-  "CARRO",
-  "CASAL",
-  "CASAR",
-  "CASAS",
-  "CASCA",
-  "CASCO",
-  "CERTO",
-  "CLARO",
-  "CORPO",
-  "DEVER",
-  "DENTE",
-  "ERROS",
-  "ERRAR",
-  "FALAR",
-  "FESTA",
-  "FRUTA",
-  "GATOS",
-  "GOLPE",
-  "JOGAR",
-  "JOGOS",
-  "LIVRO",
-  "LONGE",
-  "LUGAR",
-  "MAGIA",
-  "MELAO",
-  "MUNDO",
-  "NAVIO",
-  "NOITE",
-  "NINJA",
-  "NUVEM",
-  "OUVIR",
-  "PEDRA",
-  "PERNA",
-  "PERTO",
-  "PONTE",
-  "PONTO",
-  "PRAIA",
-  "PRACA",
-  "PRAZO",
-  "PRETO",
-  "RISCO",
-  "SALAS",
-  "SALTO",
-  "SANTO",
-  "SENTI",
-  "TERMO",
-  "TEMPO",
-  "TERRA",
-  "TIGRE",
-  "TORRE",
-  "TRIGO",
-  "VALOR",
-  "VERBO",
-  "VERDE",
-  "VINHO",
-  "VIVER",
-  "ZEBRA",
-  "NOCHE",
-  "BRISA",
-  "BRASA",
-  "CLUBE",
-  "DADOS",
-  "DANCA",
-  "FOSSA",
-  "GRUPO",
-  "IDEIA",
-  "NIVEL",
-  "PLANO",
-  "POETA",
-  "RAMOS",
-  "RENDA",
-  "ROSTO",
-  "RUINS",
-  "SINAL",
-  "SONHO",
-  "TEXTO",
-  "RUELA",
-  "PISCA",
-  "DIQUE",
-  "AGORA",
-  "AINDA",
-  "ANTES",
-  "APOIO",
-  "AREIA",
-  "ARROZ",
-  "ATRAS",
-  "BAIXO",
-  "BANHO",
-  "BATER",
-  "BEBER",
-  "BEIJO",
-  "BICHO",
-  "BOLSA",
-  "BOMBA",
-  "BOTAR",
-  "BRAVO",
-  "CABER",
-  "CALMA",
-  "CALOR",
-  "CAMPO",
-  "CANTO",
-  "CAPAZ",
-  "CARTA",
-  "CERCA",
-  "CHAVE",
-  "CHEIO",
-  "CHUVA",
-  "CICLO",
-  "CINTO",
-  "COISA",
-  "COMER",
-  "COMUM",
-  "CORDA",
-  "CULPA",
-  "CURSO",
-  "DIZER",
-  "DURAR",
-  "ENTRA",
-  "ENVIO",
-  "ESTAR",
-  "FALTA",
-  "FAROL",
-  "FEIRA",
-  "FELIZ",
-  "FICAR",
-  "FILHO",
-  "FINAL",
-  "FOCAR",
-  "FORMA",
-  "FORTE",
-  "FOTOS",
-  "FRASE",
-  "FREIO",
-  "FUNDO",
-  "GANHO",
-  "GENTE",
-  "GERAL",
-  "HOMEM",
-  "HOTEL",
-  "IGUAL",
-  "IDADE",
-  "IMPAR",
-  "JOVEM",
-  "JUNTO",
-  "LADOS",
-  "LENTO",
-  "LETRA",
-  "LIMPO",
-  "LINHA",
-  "LOCAL",
-  "LOUCO",
-  "LUCRO",
-  "LUTAR",
-  "MAIOR",
-  "MARCA",
-  "MENOR",
-  "MESMO",
-  "METRO",
-  "MINHA",
-  "MORAR",
-  "MUITO",
-  "NOBRE",
-  "NORTE",
-  "NOSSA",
-  "NOVOS",
-  "NUNCA",
-  "OLHAR",
-  "ONTEM",
-  "ORDEM",
-  "OUTRO",
-  "PAGAR",
-  "PALCO",
-  "PAPEL",
-  "PARAR",
-  "PARTE",
-  "PASSO",
-  "PAUSA",
-  "PEDIR",
-  "PEIXE",
-  "PENSA",
-  "PERDA",
-  "PODER",
-  "PORTE",
-  "POSSO",
-  "PRECO",
-  "PRIMO",
-  "PROVA",
-  "QUASE",
-  "QUERO",
-  "RAPAZ",
-  "RAZAO",
-  "REINO",
-  "SABER",
-  "SAIDA",
-  "SALDO",
-  "SENHA",
-  "SERIE",
-  "SOBRA",
-  "SORTE",
-  "SUBIR",
-  "SUAVE",
-  "TANTO",
-  "TARDE",
-  "TEMER",
-  "TENHO",
-  "TENTA",
-  "TERNO",
-  "TIRAR",
-  "TODOS",
-  "TOMAR",
-  "TORNA",
-  "TRAGO",
-  "TRAJE",
-  "TRATO",
-  "TREVO",
-  "TROCA",
-  "UNIAO",
-  "UNIDO",
-  "VALER",
-  "VELHO",
-  "VENDA",
-  "VENHO",
-  "VESTE",
-  "VIOLA",
-  "VIRAR",
-  "VISTA",
-  "VOLTA",
-  "SOBRE",
-  "ENTRE",
-  "FAZER",
-  "ASSIM",
-  "ESTÃO",
-  "FORAM",
-  "TODAS",
-  "ENTÃO",
-  "DISSE",
-  "NOSSO",
-  "MENOS",
-  "VEZES",
-  "SENDO",
-  "PODEM",
-  "ESTOU",
-  "POUCO",
-  "DESDE",
-  "SAÚDE",
-  "TINHA",
-  "NESTE",
-  "PELOS",
-  "OUTRA",
-  "CONTA",
-  "DESTE",
-  "DESTA",
-  "FILME",
-  "PREÇO",
-  "NESTA",
-  "MESMA",
-  "HORAS",
-  "TEMOS",
-  "VAMOS",
-  "SERIA",
-  "VOCÊS",
-  "DISSO",
-  "FEITO",
-  "PELAS",
-  "FICOU",
-  "ALGUM",
-  "MESES",
-  "NESSE",
-  "ESSES",
-  "DESSA",
-  "TENHA",
-  "SÉRIE",
-  "SERÃO",
-  "VÍDEO",
-  "AJUDA",
-  "DESSE",
-  "PORÉM",
-  "QUAIS",
-  "ESSAS",
-  "TOTAL",
-  "LISTA",
-  "SUPER",
-  "USADO",
-  "NÍVEL",
-  "PORTO",
-  "BUSCA",
-  "NOVAS",
-  "HAVIA",
-  "GOSTO",
-  "DEVEM",
-  "FÁCIL",
-  "FRETE",
-  "ESTES",
-  "FORÇA",
-  "OLHOS",
-  "CAUSA",
-  "DICAS",
-  "LIVRE",
-  "FONTE",
-  "CRIAR",
-  "MORTE",
-  "FAVOR",
-  "MANHÃ",
-  "ÉPOCA",
-  "FOSSE",
-  "ACIMA",
-  "DELES",
-  "LONGO",
-  "CINCO",
-  "LEGAL",
-  "SEXTA",
-  "TENDO",
-  "FAZEM",
-  "ATRÁS",
-  "AUTOR",
-  "PORTA",
-  "LINDA",
-  "PASSA",
-  "CAIXA",
-  "PEÇAS",
-  "ÚNICO",
-  "AÇÕES",
-  "CIVIL",
-  "CASOS",
-  "NESSA",
-  "NATAL",
-  "BANCO",
-  "MINAS",
-  "SOMOS",
-  "BANDA",
-  "LINDO",
-  "PULGA",
-  "PLACA",
-  "PLEBE",
-  "PRAGA",
-  "METRÔ",
-  "MENTE",
-  "MACRO",
-  "MICRO",
-  "FRACO",
-  "TURVO",
-  "TRAVE",
-  "POSTE"
+  "AMIGO", "AMORA", "ANEIS", "CACAO", "CAFES", "CARRO", "CASAL", "CASAR",
+  "CASAS", "CASCA", "CASCO", "CERTO", "CLARO", "CORPO", "DEVER", "DENTE",
+  "ERROS", "ERRAR", "FALAR", "FESTA", "FRUTA", "GATOS", "GOLPE", "JOGAR",
+  "JOGOS", "LIVRO", "LONGE", "LUGAR", "MAGIA", "MELAO", "MUNDO", "NAVIO",
+  "NOITE", "NINJA", "NUVEM", "OUVIR", "PEDRA", "PERNA", "PERTO", "PONTE",
+  "PONTO", "PRAIA", "PRACA", "PRAZO", "PRETO", "RISCO", "SALAS", "SALTO",
+  "SANTO", "SENTI", "TERMO", "TEMPO", "TERRA", "TIGRE", "TORRE", "TRIGO",
+  "VALOR", "VERBO", "VERDE", "VINHO", "VIVER", "ZEBRA", "NOCHE", "BRISA",
+  "BRASA", "CLUBE", "DADOS", "DANCA", "FOSSA", "GRUPO", "IDEIA", "NIVEL",
+  "PLANO", "POETA", "RAMOS", "RENDA", "ROSTO", "RUINS", "SINAL", "SONHO",
+  "TEXTO", "RUELA", "PISCA", "DIQUE", "AGORA", "AINDA", "ANTES", "APOIO",
+  "AREIA", "ARROZ", "ATRAS", "BAIXO", "BANHO", "BATER", "BEBER", "BEIJO",
+  "BICHO", "BOLSA", "BOMBA", "BOTAR", "BRAVO", "CABER", "CALMA", "CALOR",
+  "CAMPO", "CANTO", "CAPAZ", "CARTA", "CERCA", "CHAVE", "CHEIO", "CHUVA",
+  "CICLO", "CINTO", "COISA", "COMER", "COMUM", "CORDA", "CULPA", "CURSO",
+  "DIZER", "DURAR", "ENTRA", "ENVIO", "ESTAR", "FALTA", "FAROL", "FEIRA",
+  "FELIZ", "FICAR", "FILHO", "FINAL", "FOCAR", "FORMA", "FORTE", "FOTOS",
+  "FRASE", "FREIO", "FUNDO", "GANHO", "GENTE", "GERAL", "HOMEM", "HOTEL",
+  "IGUAL", "IDADE", "IMPAR", "JOVEM", "JUNTO", "LADOS", "LENTO", "LETRA",
+  "LIMPO", "LINHA", "LOCAL", "LOUCO", "LUCRO", "LUTAR", "MAIOR", "MARCA",
+  "MENOR", "MESMO", "METRO", "MINHA", "MORAR", "MUITO", "NOBRE", "NORTE",
+  "NOSSA", "NOVOS", "NUNCA", "OLHAR", "ONTEM", "ORDEM", "OUTRO", "PAGAR",
+  "PALCO", "PAPEL", "PARAR", "PARTE", "PASSO", "PAUSA", "PEDIR", "PEIXE",
+  "PENSA", "PERDA", "PODER", "PORTE", "POSSO", "PRECO", "PRIMO", "PROVA",
+  "QUASE", "QUERO", "RAPAZ", "RAZAO", "REINO", "SABER", "SAIDA", "SALDO",
+  "SENHA", "SERIE", "SOBRA", "SORTE", "SUBIR", "SUAVE", "TANTO", "TARDE",
+  "TEMER", "TENHO", "TENTA", "TERNO", "TIRAR", "TODOS", "TOMAR", "TORNA",
+  "TRAGO", "TRAJE", "TRATO", "TREVO", "TROCA", "UNIAO", "UNIDO", "VALER",
+  "VELHO", "VENDA", "VENHO", "VESTE", "VIOLA", "VIRAR", "VISTA", "VOLTA",
+  "SOBRE", "ENTRE", "FAZER", "ASSIM", "ESTÃO", "FORAM", "TODAS", "ENTÃO",
+  "DISSE", "NOSSO", "MENOS", "VEZES", "SENDO", "PODEM", "ESTOU", "POUCO",
+  "DESDE", "SAÚDE", "TINHA", "NESTE", "PELOS", "OUTRA", "CONTA", "DESTE",
+  "DESTA", "FILME", "PREÇO", "NESTA", "MESMA", "HORAS", "TEMOS", "VAMOS",
+  "SERIA", "VOCÊS", "DISSO", "FEITO", "PELAS", "FICOU", "ALGUM", "MESES",
+  "NESSE", "ESSES", "DESSA", "TENHA", "SÉRIE", "SERÃO", "VÍDEO", "AJUDA",
+  "DESSE", "PORÉM", "QUAIS", "ESSAS", "TOTAL", "LISTA", "SUPER", "USADO",
+  "NÍVEL", "PORTO", "BUSCA", "NOVAS", "HAVIA", "GOSTO", "DEVEM", "FÁCIL",
+  "FRETE", "ESTES", "FORÇA", "OLHOS", "CAUSA", "DICAS", "LIVRE", "FONTE",
+  "CRIAR", "MORTE", "FAVOR", "MANHÃ", "ÉPOCA", "FOSSE", "ACIMA", "DELES",
+  "LONGO", "CINCO", "LEGAL", "SEXTA", "TENDO", "FAZEM", "ATRÁS", "AUTOR",
+  "PORTA", "LINDA", "PASSA", "CAIXA", "PEÇAS", "ÚNICO", "AÇÕES", "CIVIL",
+  "CASOS", "NESSA", "NATAL", "BANCO", "MINAS", "SOMOS", "BANDA", "LINDO",
+  "PULGA", "PLACA", "PLEBE", "PRAGA", "METRÔ", "MENTE", "MACRO", "MICRO",
+  "FRACO", "TURVO", "TRAVE", "POSTE"
 ];
 
 // Subconjunto de soluções (pode ser a própria lista).
@@ -913,7 +625,6 @@ function buildBoards(){
 
     const title = document.createElement("div");
     title.className = "board-title";
-    title.textContent = `Palavra ${b + 1}`;
     shell.appendChild(title);
 
     const board = document.createElement("div");
@@ -964,7 +675,6 @@ function buildBoards(){
 }
 
 function buildKeyboard(){
-  /* Layout com Ç */
   const rows = [
     "Q W E R T Y U I O P".split(" "),
     "A S D F G H J K L Backspace".split(" "),
@@ -1209,64 +919,17 @@ function deleteLetter() {
 const RULES = {
   "length": 5,
   "requireVowel": true,
-  "forbiddenLetters": [
-    "K",
-    "W",
-    "Y"
-  ],
+  "forbiddenLetters": [ "K", "W", "Y" ],
   "qMustHaveU": true,
-  "forbiddenSequences": [
-    "NP",
-    "NB",
-    "FC",
-    "TC",
-    "MN",
-    "PF",
-    "VC"
-  ],
-  "allowedDouble": [
-    "RR",
-    "SS"
-  ],
+  "forbiddenSequences": [ "NP", "NB", "FC", "TC", "MN", "PF", "VC" ],
+  "allowedDouble": [ "RR", "SS" ],
   "maxConsonantsInRow": "3",
   "forbiddenStart": [
-    "BN",
-    "BT",
-    "CT",
-    "DL",
-    "FN",
-    "GN",
-    "KT",
-    "TM",
-    "VT",
-    "ZX",
-    "Ç",
-    "DV",
-    "TM",
-    "BD",
-    "PT",
-    "MP"
+    "BN", "BT", "CT", "DL", "FN", "GN", "KT", "TM", "VT", "ZX", "Ç", "DV", "TM",
+    "BD", "PT", "MP"
   ],
-  "forbiddenEnd": [
-    "H",
-    "Q",
-    "F",
-    "T",
-    "P",
-    "D",
-    "G",
-    "J",
-    "C",
-    "V",
-    "B",
-    "Ç"
-  ],
-  "bannedWords": [
-    "JANJA",
-    "CROTE",
-    "FRACI",
-    "LISSO"
-  ]
+  "forbiddenEnd": [ "H", "Q", "F", "T", "P", "D", "G", "J", "C", "V", "B", "Ç" ],
+  "bannedWords": [ "JANJA", "CROTE", "FRACI", "LISSO" ]
 };
 
 /* ===================== REGRAS E AVALIAÇÃO ===================== */

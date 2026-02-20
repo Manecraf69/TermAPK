@@ -304,13 +304,72 @@ async function saveRules(){
   const file = await fileHandle.getFile();
   let text = await file.text();
 
+  const MAX_LINE_LEN = 80;
+
+  function formatValue(value, indentLevel){
+    if(Array.isArray(value)){
+      return formatArray(value, indentLevel);
+    }
+    if(value && typeof value === "object"){
+      return formatObject(value, indentLevel);
+    }
+    return JSON.stringify(value);
+  }
+
+  function formatArray(arr, indentLevel){
+    if(arr.length === 0) return "[]";
+
+    const indent = "  ".repeat(indentLevel);
+    const childIndent = "  ".repeat(indentLevel + 1);
+    const serialized = arr.map(item => formatValue(item, indentLevel + 1));
+    const singleLine = `[ ${serialized.join(", ")} ]`;
+
+    if((indent + singleLine).length <= MAX_LINE_LEN){
+      return singleLine;
+    }
+
+    const lines = [];
+    let current = "";
+    serialized.forEach(item => {
+      const chunk = current ? `, ${item}` : item;
+      const candidate = current + chunk;
+      if((childIndent + candidate).length <= MAX_LINE_LEN){
+        current = candidate;
+        return;
+      }
+      if(current){
+        lines.push(current);
+      }
+      current = item;
+    });
+    if(current){
+      lines.push(current);
+    }
+
+    return "[\n" + lines.map(line => `${childIndent}${line}`).join(",\n") + `\n${indent}]`;
+  }
+
+  function formatObject(obj, indentLevel){
+    const keys = Object.keys(obj);
+    if(keys.length === 0) return "{}";
+
+    const indent = "  ".repeat(indentLevel);
+    const childIndent = "  ".repeat(indentLevel + 1);
+    const lines = keys.map((key) => {
+      const valueText = formatValue(obj[key], indentLevel + 1);
+      return `${childIndent}${JSON.stringify(key)}: ${valueText}`;
+    });
+
+    return "{\n" + lines.join(",\n") + `\n${indent}}`;
+  }
+
   text = text.replace(
     /const RULES = {[\s\S]*?};/,
-    "const RULES = " + JSON.stringify(RULES,null,2) + ";"
+    "const RULES = " + formatObject(RULES, 0) + ";"
   );
   text = text.replace(
     /const WORDS = \[[\s\S]*?\];/,
-    "const WORDS = " + JSON.stringify(WORDS,null,2) + ";"
+    "const WORDS = " + formatArray(WORDS, 0) + ";"
   );
 
   const w = await fileHandle.createWritable();
