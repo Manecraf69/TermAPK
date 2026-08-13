@@ -160,6 +160,39 @@
     width:100%;
     min-width:0;
   }
+  .board-area{
+    display:flex;
+    align-items:flex-start;
+    justify-content:center;
+    gap:4px;
+    width:100%;
+    min-width:0;
+  }
+  .relevant-letters{
+    display:flex;
+    flex:0 0 22px;
+    flex-direction:column;
+    align-self:stretch;
+    justify-content:center;
+    gap:3px;
+    width:22px;
+  }
+  .relevant-letter{
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    width:100%;
+    aspect-ratio:1;
+    border-radius:5px;
+    color:#fff;
+    font-size:.78rem;
+    font-weight:800;
+    line-height:1;
+    text-transform:uppercase;
+  }
+  .relevant-letter.present{background:var(--present);}
+  .relevant-letter.correct{background:var(--correct);}
+  .boards-wrap.solo .relevant-letters{display:none;}
   .boards-wrap.solo .board{
     margin-top:4px;
     max-width:272px;
@@ -378,6 +411,16 @@
     .boards-wrap.quarteto .tile{
       border-radius:clamp(3px, 1.4vw, 7px);
       font-size:clamp(.72rem, 4.4vw, 1.2rem);
+    }
+    .board-area{gap:clamp(2px, .7vw, 4px);}
+    .relevant-letters{
+      flex-basis:clamp(15px, 4vw, 20px);
+      width:clamp(15px, 4vw, 20px);
+      gap:2px;
+    }
+    .relevant-letter{
+      border-radius:4px;
+      font-size:clamp(.55rem, 2.5vw, .72rem);
     }
     .tile{padding-bottom:2px; border-width:1.5px;}
   }
@@ -675,12 +718,22 @@ function buildBoards(){
     const shell = document.createElement("div");
     shell.className = "board-shell";
 
+    const boardArea = document.createElement("div");
+    boardArea.className = "board-area";
+    shell.appendChild(boardArea);
+
     const board = document.createElement("div");
     board.className = "board";
     board.style.setProperty("--cols", WORD_LENGTH);
     board.setAttribute("role", "grid");
     board.setAttribute("aria-label", count === 1 ? "Palavra" : `Palavra ${b + 1}`);
-    shell.appendChild(board);
+    boardArea.appendChild(board);
+
+    const relevantEl = document.createElement("div");
+    relevantEl.className = "relevant-letters";
+    relevantEl.setAttribute("aria-label", `Letras relevantes da palavra ${b + 1}`);
+    relevantEl.setAttribute("aria-live", "polite");
+    boardArea.appendChild(relevantEl);
     wrap.appendChild(shell);
 
     const boardState = {
@@ -688,7 +741,9 @@ function buildBoards(){
       grid: [],
       solution: "",
       solved: false,
-      revealed: []
+      revealed: [],
+      relevantEl,
+      relevantLetters: new Map()
     };
 
     for(let r=0; r<getMaxTries(); r++){
@@ -1209,6 +1264,31 @@ function animateWinRow(board, rowIdx){
   });
 }
 
+function addRelevantLetter(board, letter, state){
+  if(currentMode === "solo" || !board?.relevantEl) return;
+  if(state !== "present" && state !== "correct") return;
+
+  const normalizedLetter = String(letter || "").toUpperCase();
+  if(!normalizedLetter) return;
+
+  const known = board.relevantLetters.get(normalizedLetter);
+  if(known){
+    if(known.state === "correct" || known.state === state) return;
+    known.state = "correct";
+    known.el.classList.remove("present");
+    known.el.classList.add("correct");
+    known.el.setAttribute("aria-label", `${normalizedLetter}, correta`);
+    return;
+  }
+
+  const item = document.createElement("span");
+  item.className = `relevant-letter ${state}`;
+  item.textContent = normalizedLetter;
+  item.setAttribute("aria-label", `${normalizedLetter}, ${state === "correct" ? "correta" : "presente"}`);
+  board.relevantEl.appendChild(item);
+  board.relevantLetters.set(normalizedLetter, { el:item, state });
+}
+
 function revealRow(board, rowIdx, outcome){
   const tiles = board.grid[rowIdx];
   // Revelar em sequência com flip
@@ -1220,6 +1300,7 @@ function revealRow(board, rowIdx, outcome){
         tile.classList.remove("flip");
         tile.classList.add(state);
         updateKeyboardKey(tile.textContent, state);
+        addRelevantLetter(board, tile.textContent, state);
       }, 150);
     }, i * 260);
   });
