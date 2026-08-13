@@ -88,7 +88,7 @@
   }
   main{
     width:100%;
-    max-width:1100px;
+    max-width:1600px;
     min-width:0;
     height:100vh;
     height:100dvh;
@@ -124,11 +124,11 @@
   }
   .boards-wrap.dueto{
     grid-template-columns: repeat(2, minmax(0, 1fr));
-    max-width:500px;
+    max-width:920px;
   }
   .boards-wrap.quarteto{
     grid-template-columns: repeat(4, minmax(0, 1fr));
-    max-width:980px;
+    max-width:1500px;
     gap:10px;
   }
   .boards-wrap.dueto .board{
@@ -148,6 +148,14 @@
   .boards-wrap.quarteto .tile{
     border-radius:7px;
     font-size:1rem;
+  }
+  @media (min-width:601px){
+    .boards-wrap.dueto .board{
+      max-width:min(420px, calc((100dvh - 235px) * .714));
+    }
+    .boards-wrap.quarteto .board{
+      max-width:min(330px, calc((100dvh - 235px) * .555));
+    }
   }
   .boards-wrap.mode-transition{
     animation: modeSwitch .24s ease;
@@ -176,6 +184,11 @@
     justify-content:center;
     gap:3px;
     width:22px;
+    transition:opacity .2s ease, filter .2s ease;
+  }
+  .board-shell.solved .relevant-letters{
+    opacity:.3;
+    filter:grayscale(1);
   }
   .relevant-letter{
     display:flex;
@@ -737,13 +750,16 @@ function buildBoards(){
     wrap.appendChild(shell);
 
     const boardState = {
+      shell,
       el: board,
       grid: [],
       solution: "",
       solved: false,
       revealed: [],
       relevantEl,
-      relevantLetters: new Map()
+      relevantLetters: new Map(),
+      relevantOrder: [],
+      relevantEvents: []
     };
 
     for(let r=0; r<getMaxTries(); r++){
@@ -1224,6 +1240,7 @@ function submitGuess() {
       const solved = outcome.every(s => s === "correct");
       if(solved){
         board.solved = true;
+        board.shell.classList.add("solved");
         animateWinRow(board, currentRow);
       }
     });
@@ -1264,29 +1281,53 @@ function animateWinRow(board, rowIdx){
   });
 }
 
-function addRelevantLetter(board, letter, state){
+function updateRelevantLetters(board, letter, state, rowIdx){
   if(currentMode === "solo" || !board?.relevantEl) return;
   if(state !== "present" && state !== "correct") return;
+  letter = String(letter || "").toUpperCase();
+  if(!letter) return;
+  board.relevantEvents.push({ letter, state, rowIdx });
+  if(!board.relevantOrder.includes(letter)) board.relevantOrder.push(letter);
 
-  const normalizedLetter = String(letter || "").toUpperCase();
-  if(!normalizedLetter) return;
+  const discovered = new Map();
+  const rows = new Map();
+  board.relevantEvents.forEach(event => {
+    if(!rows.has(event.rowIdx)) rows.set(event.rowIdx, []);
+    rows.get(event.rowIdx).push(event);
+  });
+  rows.forEach(events => {
+    const perGuess = new Map();
+    events.forEach(event => {
+      const counts = perGuess.get(event.letter) || { total:0, correct:0 };
+      counts.total++;
+      if(event.state === "correct") counts.correct++;
+      perGuess.set(event.letter, counts);
+    });
+    perGuess.forEach((counts, letter) => {
+      const best = discovered.get(letter) || { total:0, correct:0 };
+      best.total = Math.max(best.total, counts.total);
+      best.correct = Math.max(best.correct, counts.correct);
+      discovered.set(letter, best);
+    });
+  });
 
-  const known = board.relevantLetters.get(normalizedLetter);
-  if(known){
-    if(known.state === "correct" || known.state === state) return;
-    known.state = "correct";
-    known.el.classList.remove("present");
-    known.el.classList.add("correct");
-    known.el.setAttribute("aria-label", `${normalizedLetter}, correta`);
-    return;
-  }
-
-  const item = document.createElement("span");
-  item.className = `relevant-letter ${state}`;
-  item.textContent = normalizedLetter;
-  item.setAttribute("aria-label", `${normalizedLetter}, ${state === "correct" ? "correta" : "presente"}`);
-  board.relevantEl.appendChild(item);
-  board.relevantLetters.set(normalizedLetter, { el:item, state });
+  board.relevantEl.innerHTML = "";
+  board.relevantLetters.clear();
+  board.relevantOrder.forEach(letter => {
+    const counts = discovered.get(letter);
+    if(!counts) return;
+    const items = [];
+    for(let occurrence=0; occurrence<counts.total; occurrence++){
+      const state = occurrence < counts.correct ? "correct" : "present";
+      const item = document.createElement("span");
+      item.className = `relevant-letter ${state}`;
+      item.textContent = letter;
+      item.setAttribute("aria-label", `${letter}, ${state === "correct" ? "correta" : "presente"}, ocorrência ${occurrence + 1} de ${counts.total}`);
+      board.relevantEl.appendChild(item);
+      items.push({ el:item, state });
+    }
+    board.relevantLetters.set(letter, items);
+  });
 }
 
 function revealRow(board, rowIdx, outcome){
@@ -1300,7 +1341,7 @@ function revealRow(board, rowIdx, outcome){
         tile.classList.remove("flip");
         tile.classList.add(state);
         updateKeyboardKey(tile.textContent, state);
-        addRelevantLetter(board, tile.textContent, state);
+        updateRelevantLetters(board, tile.textContent, state, rowIdx);
       }, 150);
     }, i * 260);
   });
@@ -1392,6 +1433,7 @@ document.addEventListener("keydown", (e)=>{
   if(inputLocked){
     if(
       getColumnShortcut(e) !== null ||
+      e.key === "Tab" ||
       e.key === "Enter" ||
       e.key === "Backspace" ||
       e.key === "Delete" ||
@@ -1399,6 +1441,17 @@ document.addEventListener("keydown", (e)=>{
     ){
       e.preventDefault();
     }
+    return;
+  }
+  if(e.key === "Tab"){
+    if(!cursorActive){
+      currentCol = 0;
+      cursorActive = true;
+    }else{
+      currentCol = (currentCol + 1) % WORD_LENGTH;
+    }
+    updateCursor();
+    e.preventDefault();
     return;
   }
   const shortcutCol = getColumnShortcut(e);
