@@ -46,6 +46,7 @@
     display:flex;
     flex-direction:column;
     align-items:center;
+    overflow:hidden;
   }
   header{
     width:100%;
@@ -87,11 +88,16 @@
   }
   main{
     width:100%;
-    max-width:980px;
+    max-width:1100px;
+    min-width:0;
+    height:100vh;
+    height:100dvh;
     display:flex;
     flex-direction:column;
     align-items:center;
-    gap:16px;
+    gap:12px;
+    padding:0 12px max(10px, env(safe-area-inset-bottom));
+    overflow:hidden;
   }
   .topbar{
     width:100%;
@@ -99,20 +105,26 @@
     display:flex;
     justify-content:center;
     padding-top:8px;
+    flex:0 0 auto;
   }
   .boards-wrap{
     width:100%;
+    max-width:100%;
     display:grid;
     gap:12px;
     align-items:start;
     justify-content:center;
+    min-height:0;
+    flex:1 1 auto;
+    overflow:hidden;
+    padding:2px 4px;
   }
   .boards-wrap.solo{
     grid-template-columns: 1fr;
   }
   .boards-wrap.dueto{
     grid-template-columns: repeat(2, minmax(0, 1fr));
-    max-width:460px;
+    max-width:500px;
   }
   .boards-wrap.quarteto{
     grid-template-columns: repeat(4, minmax(0, 1fr));
@@ -120,15 +132,13 @@
     gap:10px;
   }
   .boards-wrap.dueto .board{
-    grid-template-columns: repeat(var(--cols,5), minmax(0, 40px));
-    grid-auto-rows:40px;
-    gap:5px;
+    max-width:195px;
+    gap:4px;
     margin-top:0;
   }
   .boards-wrap.quarteto .board{
-    grid-template-columns: repeat(var(--cols,5), minmax(0, 30px));
-    grid-auto-rows:30px;
-    gap:3px;
+    max-width:145px;
+    gap:2px;
     margin-top:0;
   }
   .boards-wrap.dueto .tile{
@@ -146,34 +156,27 @@
     display:flex;
     flex-direction:column;
     align-items:center;
-    gap:6px;
+    gap:0;
     width:100%;
-  }
-  .board-title{
-    font-size:.8rem;
-    opacity:.85;
-    letter-spacing:.08em;
-    text-transform:uppercase;
-    font-weight:700;
-    min-height:1.1rem;
-  }
-  .boards-wrap.solo .board-title{
-    display:none;
+    min-width:0;
   }
   .boards-wrap.solo .board{
-    margin-top:10px;
+    margin-top:4px;
+    max-width:272px;
   }
 
   /* Grade */
   .board{
     display:grid;
-    grid-template-columns: repeat(var(--cols,5), minmax(0, 56px));
-    grid-auto-rows:56px;
-    gap:8px;
+    grid-template-columns: repeat(var(--cols,5), minmax(0, 1fr));
+    width:100%;
+    gap:5px;
     margin-top:8px;
     touch-action:manipulation;
   }
   .tile{
+    min-width:0;
+    aspect-ratio:1;
     border:2px solid var(--border);
     border-radius:10px;
     display:flex;
@@ -231,31 +234,38 @@
     gap:6px;
     width:100%;
     max-width:560px;
+    min-width:0;
+    flex:0 0 auto;
   }
   .row{
     display:flex;
     justify-content:center;
     gap:6px;
+    width:100%;
+    min-width:0;
   }
   .key{
     background:var(--kbd-bg);
     color:#000;
     border:0;
     border-radius:6px;
-    padding:7px;
+    padding:7px 4px;
     font-weight:700;
     font-size: 20px;
-    min-width:60px;
-    max-height: 35px;
+    min-width:0;
+    width:0;
+    height:38px;
+    flex:1 1 0;
     cursor:pointer;
     user-select:none;
     text-transform:uppercase;
   }
-  .key.big{ min-width:90px; }
+  .key.big{ flex-grow:1.55; }
   .key.dark{ background:var(--absent); color:#fff; }
   .key.present{ background:var(--present); color:#fff; }
   .key.correct{ background:var(--correct); color:#fff; }
-  .key.manual-off{
+  .key.manual-off,
+  .key.discarded{
     opacity:.35;
     filter: grayscale(1);
   }
@@ -263,7 +273,13 @@
     animation: keyflash .26s ease;
   }
   .key.keyflash-error{
-    animation: keyflashError .26s ease;
+    animation:none;
+    background:#e05555 !important;
+    color:#fff !important;
+    opacity:1 !important;
+    filter:none !important;
+    transform:scale(1.04);
+    transition:background-color .06s ease, color .06s ease, opacity .06s ease, transform .06s ease;
   }
   .key .key-symbol{
     display:inline-block;
@@ -300,6 +316,7 @@
     45%{
       background:#e05555;
       color:#fff;
+      opacity:1;
       transform:scale(1.04);
     }
     100%{
@@ -315,50 +332,66 @@
   }
 
   @media (max-width:600px){
-    .key{
-      padding:12px 8px;
-      min-width:32px;
-      font-size: 12px;
+    main{
+      max-width:none;
+      gap:8px;
+      padding-inline:6px;
+      padding-bottom:max(6px, env(safe-area-inset-bottom));
     }
-    .key.big{ min-width:56px; }
-    main{max-width:360px;}
     .topbar{
       max-width:360px;
       padding-top:4px;
     }
-    .keyboard{ gap:4px; max-width:360px; }
-    .row{ gap:4px; }
+    .btn{padding:7px 9px;}
+    .keyboard{ gap:4px; max-width:520px; }
+    .row{ gap:3px; }
     .key{
-      padding:12px 6px;
-      min-width:24px;
+      height:clamp(22px, 3.5vh, 28px);
+      padding:4px 2px;
+      font-size:clamp(10px, 3vw, 14px);
     }
-    .key.big{ min-width:calc(56px * 0.95); }
-    .board{ grid-template-columns: repeat(var(--cols,5), minmax(0, 48px)); grid-auto-rows:48px; gap:6px;}
+    .boards-wrap.solo .board{max-width:252px;}
+    .board{gap:clamp(2px, .8vw, 4px);}
     .boards-wrap.dueto{
-      grid-template-columns: 1fr;
-      max-width:360px;
+      grid-template-columns:repeat(2, minmax(0, 1fr));
+      max-width:500px;
+      gap:8px;
     }
     .boards-wrap.quarteto{
       grid-template-columns: repeat(2, minmax(0, 1fr));
-      max-width:360px;
-      gap:10px;
+      max-width:500px;
+      gap:6px 8px;
+      align-content:space-evenly;
     }
     .boards-wrap.dueto .board{
-      grid-template-columns: repeat(var(--cols,5), minmax(0, 44px));
-      grid-auto-rows:44px;
-      gap:6px;
+      max-width:min(88%, 185px);
+      gap:clamp(2px, .7vw, 4px);
     }
     .boards-wrap.dueto .tile{
-      font-size:1.6rem;
+      border-radius:clamp(4px, 1.6vw, 8px);
+      font-size:clamp(.82rem, 5vw, 1.45rem);
     }
     .boards-wrap.quarteto .board{
-      grid-template-columns: repeat(var(--cols,5), minmax(0, 34px));
-      grid-auto-rows:34px;
-      gap:4px;
+      max-width:min(88%, calc((100dvh - 128px) * .235));
+      gap:clamp(1px, .6vw, 3px);
     }
     .boards-wrap.quarteto .tile{
-      font-size:1.2rem;
+      border-radius:clamp(3px, 1.4vw, 7px);
+      font-size:clamp(.72rem, 4.4vw, 1.2rem);
     }
+    .tile{padding-bottom:2px; border-width:1.5px;}
+  }
+
+  @media (max-width:600px) and (orientation:landscape){
+    .boards-wrap.quarteto{
+      grid-template-columns:repeat(4, minmax(0, 1fr));
+      max-width:900px;
+      gap:6px;
+    }
+    .boards-wrap.quarteto .board{max-width:145px;}
+    .topbar{padding-top:2px;}
+    .key{height:34px; font-size:13px;}
+    .keyboard{gap:3px;}
   }
 
   /* Toast / Modal */
@@ -375,6 +408,9 @@
     transition: opacity .2s ease;
     font-weight:600;
     z-index:5;
+    width:max-content;
+    max-width:calc(100vw - 24px);
+    text-align:center;
   }
   .toast.show{ opacity:1; }
   dialog{
@@ -384,6 +420,8 @@
     background:var(--bg);
     color:var(--text);
     width:min(92vw, 520px);
+    max-height:calc(100dvh - 24px);
+    overflow:auto;
   }
   dialog::backdrop{ background: rgba(0,0,0,.5); }
   .stats{
@@ -393,6 +431,17 @@
     text-align:center; border:1px solid var(--border); border-radius:8px; padding:8px;
   }
   .small{ opacity:.9; font-size:.92rem; }
+  @media (max-width:420px){
+    .stats{grid-template-columns:repeat(2, 1fr);}
+  }
+  @media (prefers-reduced-motion:reduce){
+    *, *::before, *::after{
+      animation-duration:.01ms !important;
+      animation-iteration-count:1 !important;
+      transition-duration:.01ms !important;
+      scroll-behavior:auto !important;
+    }
+  }
 </style>
 </head>
 <body>
@@ -538,7 +587,10 @@ function flipBackspaceSymbol(){
 function isDiscardedLetter(k){
   const upper = String(k || "").toUpperCase();
   if(upper.length !== 1 || !isAlphaPt(upper)) return false;
-  return colorKeyboard.get(upper) === "absent";
+  const btn = $(`.key[data-key="${upper}"]`);
+  return colorKeyboard.get(upper) === "absent" ||
+    btn?.classList.contains("manual-off") ||
+    btn?.classList.contains("discarded");
 }
 
 /* ===================== ESTADO ===================== */
@@ -623,13 +675,11 @@ function buildBoards(){
     const shell = document.createElement("div");
     shell.className = "board-shell";
 
-    const title = document.createElement("div");
-    title.className = "board-title";
-    shell.appendChild(title);
-
     const board = document.createElement("div");
     board.className = "board";
     board.style.setProperty("--cols", WORD_LENGTH);
+    board.setAttribute("role", "grid");
+    board.setAttribute("aria-label", count === 1 ? "Palavra" : `Palavra ${b + 1}`);
     shell.appendChild(board);
     wrap.appendChild(shell);
 
@@ -722,7 +772,7 @@ function resetGame(){
 
   // Limpa estado interno do teclado
   colorKeyboard.clear();
-  $$(".key").forEach(key => key.classList.remove("dark", "present", "correct", "manual-off"));
+  $$(".key").forEach(key => key.classList.remove("dark", "present", "correct", "manual-off", "discarded"));
 
   updateInfo();
 }
@@ -739,12 +789,17 @@ function updateInfo(){
 function onVirtualKey(e){
   if(e.currentTarget.dataset.suppressClick === "1"){
     e.currentTarget.dataset.suppressClick = "0";
+    e.currentTarget.dataset.skipNextFlash = "0";
     return;
   }
-  if(e.currentTarget.classList.contains("manual-off")) return;
   const k = e.currentTarget.dataset.key;
   if(k !== "Enter"){
-    flashKey(k, isDiscardedLetter(k) ? "error" : "normal");
+    if(e.currentTarget.dataset.skipNextFlash === "1"){
+      e.currentTarget.dataset.skipNextFlash = "0";
+      clearTimeout(e.currentTarget._skipFlashTimer);
+    }else{
+      flashKey(k, isDiscardedLetter(k) ? "error" : "normal");
+    }
   }
   handleKey(k);
 }
@@ -767,12 +822,24 @@ function onVirtualKeyTouchEnd(e){
   clearTimeout(btn._longPressTimer);
   if(btn._longPressTriggered){
     e.preventDefault();
+  }else{
+    const key = btn.dataset.key;
+    if(key?.length === 1 && isDiscardedLetter(key)){
+      flashKey(key, "error");
+      btn.dataset.skipNextFlash = "1";
+      clearTimeout(btn._skipFlashTimer);
+      btn._skipFlashTimer = setTimeout(() => {
+        btn.dataset.skipNextFlash = "0";
+      }, 800);
+    }
   }
   btn._longPressTriggered = false;
 }
 function onVirtualKeyTouchCancel(e){
   const btn = e.currentTarget;
   clearTimeout(btn._longPressTimer);
+  clearTimeout(btn._skipFlashTimer);
+  btn.dataset.skipNextFlash = "0";
   btn._longPressTriggered = false;
 }
 function toggleManualKeyState(btn){
@@ -1176,8 +1243,8 @@ function paintKeyboardKey(letter, state){
   if(colorPriority[state] >= prevPrio){
     colorKeyboard.set(letter, state);
     if(keyBtn){
-      keyBtn.classList.remove("dark","present","correct","manual-off");
-      if(state === "absent") keyBtn.classList.add("dark");
+      keyBtn.classList.remove("dark","present","correct","discarded");
+      if(state === "absent") keyBtn.classList.add("discarded");
       if(state === "present") keyBtn.classList.add("present");
       if(state === "correct") keyBtn.classList.add("correct");
     }
@@ -1188,7 +1255,7 @@ function updateKeyboardKey(letter, state){
 }
 function rebuildKeyboardFromActiveBoards(){
   colorKeyboard.clear();
-  $$(".key").forEach(key => key.classList.remove("dark","present","correct"));
+  $$(".key").forEach(key => key.classList.remove("dark","present","correct","discarded"));
   const sourceBoards = modeCfg().boards > 1 ? getPlayableBoards() : boardsState;
   sourceBoards.forEach(board => {
     board.revealed.forEach(({ guess, outcome }) => {
@@ -1233,10 +1300,17 @@ function endGame(won, tries){
 }
 
 /* ===================== EVENTOS ===================== */
+function getColumnShortcut(e){
+  const codeMatch = /^(?:Digit|Numpad)([1-5])$/.exec(e.code || "");
+  const number = codeMatch ? Number(codeMatch[1]) : (/^[1-5]$/.test(e.key) ? Number(e.key) : 0);
+  return number ? number - 1 : null;
+}
+
 document.addEventListener("keydown", (e)=>{
   if(e.ctrlKey || e.metaKey || e.altKey) return;
   if(inputLocked){
     if(
+      getColumnShortcut(e) !== null ||
       e.key === "Enter" ||
       e.key === "Backspace" ||
       e.key === "Delete" ||
@@ -1244,6 +1318,14 @@ document.addEventListener("keydown", (e)=>{
     ){
       e.preventDefault();
     }
+    return;
+  }
+  const shortcutCol = getColumnShortcut(e);
+  if(shortcutCol !== null){
+    currentCol = shortcutCol;
+    cursorActive = true;
+    updateCursor();
+    e.preventDefault();
     return;
   }
   if(e.key === "Enter" || e.key === "Backspace"){
@@ -1272,6 +1354,7 @@ $("#btnMode").addEventListener("click", ()=>{
   toggleMode();
 });
 document.addEventListener("keydown", (e) => {
+  if(e.defaultPrevented) return;
   if(e.ctrlKey || e.metaKey || e.altKey) return;
   if(inputLocked) return;
 
