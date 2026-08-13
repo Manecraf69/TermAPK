@@ -1,7 +1,0 @@
-mudanças a serem feitas no editor.html
-
-exigir que abra um arquivo termo.html para editar as regras antes de qualquer coisa
-
-o campo de adicionar novo item à regra deverá ficar acima das regras atuais
-
-todos os erros devem ser feitos direto no html, nada de aviso pelo navegador

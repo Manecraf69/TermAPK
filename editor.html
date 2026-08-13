@@ -18,6 +18,7 @@ header{
   gap:8px;
   border-bottom:1px solid #333;
 }
+header .spacer{ flex:1 }
 button{
   background:#3a3a3c;
   color:#fff;
@@ -27,7 +28,22 @@ button{
   cursor:pointer;
 }
 button.primary{ background:#6ca0ff }
+button:disabled, input:disabled{ opacity:.4; cursor:not-allowed }
 main{ padding:16px; max-width:900px; margin:auto }
+
+.notice{
+  margin-bottom:16px;
+  padding:10px 12px;
+  border:1px solid #444;
+  border-radius:8px;
+  background:#1e1e20;
+  white-space:pre-wrap;
+}
+.notice.error{ border-color:#d85858; background:#351f20; color:#ffb5b5 }
+.notice.success{ border-color:#538d4e; background:#1d301f; color:#bce8b8 }
+.notice.info{ border-color:#6ca0ff; background:#1b2940; color:#c6d9ff }
+.field-error{ margin-top:7px; color:#ff9e9e; font-size:.9rem }
+.locked-message{ text-align:center; padding:32px 16px; opacity:.8 }
 
 .rule{
   border:1px solid #333;
@@ -37,6 +53,18 @@ main{ padding:16px; max-width:900px; margin:auto }
 }
 .rule h3{ margin:0 0 6px 0 }
 .rule small{ opacity:.7 }
+.rule.rule-target{
+  border-color:#6ca0ff;
+  box-shadow:0 0 0 2px rgba(108,160,255,.32);
+}
+.rule-link{
+  color:#8db7ff;
+  font:inherit;
+  font-weight:700;
+  text-decoration:underline;
+  text-underline-offset:2px;
+  cursor:pointer;
+}
 
 .items{
   display:flex;
@@ -82,11 +110,14 @@ input{
 <body>
 
 <header>
-  <button onclick="openFolder()">Abrir pasta</button>
-  <button class="primary" onclick="saveRules()">Salvar no principal.html</button>
+  <button onclick="openTermoFile()">Abrir arquivo HTML</button>
+  <span class="spacer"></span>
+  <button id="saveButton" class="primary" onclick="saveRules()" disabled>Salvar arquivo</button>
 </header>
 
 <main>
+  <div id="notice" class="notice info" role="status" aria-live="polite">Abra o arquivo HTML do jogo para começar (sugestão: termo.html).</div>
+  <div id="editorContent" hidden>
   <div class="test">
     <h3>Testar palavra</h3>
     <input id="testWord" placeholder="Digite uma palavra">
@@ -96,32 +127,110 @@ input{
 
   <div id="rules"></div>
   <div id="wordsEditor"></div>
+  </div>
+  <div id="lockedMessage" class="locked-message">Nenhuma regra pode ser editada antes de abrir um arquivo HTML válido do jogo.</div>
 </main>
 
 <script>
-let dirHandle, fileHandle;
+let fileHandle;
 let RULES = {};
 let WORDS = [];
 
-async function openFolder(){
-  dirHandle = await window.showDirectoryPicker();
-  fileHandle = await dirHandle.getFileHandle("principal.html");
+function showNotice(message, type="info"){
+  const notice = document.getElementById("notice");
+  notice.textContent = message;
+  notice.className = `notice ${type}`;
+}
+
+function showFieldError(input, message){
+  const addBox = input?.closest(".add");
+  if(!addBox) return;
+  let error = addBox.nextElementSibling;
+  if(!error?.classList.contains("field-error")){
+    error = document.createElement("div");
+    error.className = "field-error";
+    addBox.insertAdjacentElement("afterend", error);
+  }
+  error.textContent = message;
+  input.setAttribute("aria-invalid", "true");
+}
+
+function clearFieldError(input){
+  input.removeAttribute("aria-invalid");
+  const error = input.closest(".add")?.nextElementSibling;
+  if(error?.classList.contains("field-error")) error.remove();
+}
+
+function showValidationError(input, word, errors){
+  const addBox = input?.closest(".add");
+  if(!addBox) return;
+  let error = addBox.nextElementSibling;
+  if(!error?.classList.contains("field-error")){
+    error = document.createElement("div");
+    error.className = "field-error";
+    addBox.insertAdjacentElement("afterend", error);
+  }
+  error.innerHTML = `A palavra "${word}" não pode ser adicionada.<ul>${errors.map(e => `
+    <li><button type="button" class="rule-link" onclick="focusRule('${e.rule}')">${e.rule}</button>${e.item ? ` (${e.item})` : ""}: ${e.message}</li>
+  `).join("")}</ul>`;
+  input.setAttribute("aria-invalid", "true");
+}
+
+function ruleId(key){
+  return `rule-${String(key).replace(/[^a-zA-Z0-9_-]/g, "-")}`;
+}
+
+function focusRule(key){
+  const rule = document.getElementById(ruleId(key));
+  if(!rule) return;
+  document.querySelectorAll(".rule-target").forEach(el => el.classList.remove("rule-target"));
+  rule.classList.add("rule-target");
+  rule.scrollIntoView({ behavior:"smooth", block:"center" });
+  rule.focus({ preventScroll:true });
+  clearTimeout(focusRule._timer);
+  focusRule._timer = setTimeout(() => rule.classList.remove("rule-target"), 1800);
+}
+
+async function openTermoFile(){
+  if(typeof window.showOpenFilePicker !== "function"){
+    showNotice("Este navegador não permite abrir arquivos para edição. Use Chrome ou Edge.", "error");
+    return;
+  }
+  let selectedHandle;
+  try{
+    [selectedHandle] = await window.showOpenFilePicker({
+      multiple:false,
+      types:[{ description:"Arquivo HTML do Termo", accept:{ "text/html":[".html"] } }]
+    });
+  }catch(error){
+    showNotice(error?.name === "AbortError" ? "A abertura do arquivo foi cancelada." : `Não foi possível abrir o arquivo: ${error?.message || error}`, error?.name === "AbortError" ? "info" : "error");
+    return;
+  }
+  if(!selectedHandle || !selectedHandle.name.toLowerCase().endsWith(".html")){
+    showNotice("Arquivo inválido. Selecione um arquivo com extensão .html.", "error");
+    return;
+  }
+  fileHandle = selectedHandle;
   const file = await fileHandle.getFile();
   const text = await file.text();
 
   const match = text.match(/const RULES = ({[\s\S]*?});/);
   if(!match){
-    alert("RULES não encontrado no principal.html");
+    showNotice(`O arquivo ${file.name} não é um arquivo válido do jogo: RULES não foi encontrado.`, "error");
     return;
   }
   const wordsMatch = text.match(/const WORDS = (\[[\s\S]*?\]);/);
   if(!wordsMatch){
-    alert("WORDS não encontrado no principal.html");
+    showNotice(`O arquivo ${file.name} não é um arquivo válido do jogo: WORDS não foi encontrado.`, "error");
     return;
   }
 
   RULES = eval("(" + match[1] + ")");
   WORDS = eval(wordsMatch[1]);
+  document.getElementById("editorContent").hidden = false;
+  document.getElementById("lockedMessage").hidden = true;
+  document.getElementById("saveButton").disabled = false;
+  showNotice(`${file.name} aberto. As regras já podem ser editadas.`, "success");
   render();
 }
 
@@ -143,6 +252,8 @@ function render(){
 function renderSimpleRule(container, key, value){
   const d = document.createElement("div");
   d.className = "rule";
+  d.id = ruleId(key);
+  d.tabIndex = -1;
   d.innerHTML = `
     <h3>${key}</h3>
     <small>Valor simples</small><br>
@@ -154,10 +265,16 @@ function renderSimpleRule(container, key, value){
 function renderListRule(container, key, list){
   const d = document.createElement("div");
   d.className = "rule";
+  d.id = ruleId(key);
+  d.tabIndex = -1;
 
   d.innerHTML = `
     <h3>${key}</h3>
     <small>Lista editável</small>
+    <div class="add">
+      <input id="add-${key}" placeholder="Novo item" oninput="clearFieldError(this)" onkeydown="handleAddInputKeydown(event,'${key}')">
+      <button onclick="addItem('${key}')">Adicionar</button>
+    </div>
     <div class="items">
       ${list.map((v,i)=>`
         <div class="item">
@@ -165,10 +282,6 @@ function renderListRule(container, key, list){
           <button onclick="removeItem('${key}',${i})">✕</button>
         </div>
       `).join("")}
-    </div>
-    <div class="add">
-      <input id="add-${key}" placeholder="Novo item" onkeydown="handleAddInputKeydown(event,'${key}')">
-      <button onclick="addItem('${key}')">Adicionar</button>
     </div>
   `;
   container.appendChild(d);
@@ -192,7 +305,7 @@ function addItem(key, keepFocus=false){
   const value = rawValue.toUpperCase();
   const alreadyExists = RULES[key].some(v => String(v).toUpperCase() === value);
   if(alreadyExists){
-    alert(`O item "${value}" já existe na regra ${key}.`);
+    showFieldError(i, `O item "${value}" já existe na regra ${key}.`);
     if(keepFocus){
       i.focus();
       i.select();
@@ -219,12 +332,19 @@ function removeItem(key, index){
 function renderWordsEditor(){
   const container = document.getElementById("wordsEditor");
   container.innerHTML = "";
+  WORDS.sort((a, b) => String(a).localeCompare(String(b), "pt-BR", { sensitivity:"base" }));
 
   const d = document.createElement("div");
   d.className = "rule";
+  d.id = ruleId("WORDS");
+  d.tabIndex = -1;
   d.innerHTML = `
     <h3>WORDS</h3>
     <small>Lista de palavras editável (${WORDS.length} itens)</small>
+    <div class="add">
+      <input id="add-word" placeholder="Nova palavra" oninput="clearFieldError(this)" onkeydown="handleWordInputKeydown(event)">
+      <button onclick="addWord()">Adicionar palavra</button>
+    </div>
     <div class="items">
       ${WORDS.map((w, i) => `
         <div class="item">
@@ -232,10 +352,6 @@ function renderWordsEditor(){
           <button onclick="removeWord(${i})">✕</button>
         </div>
       `).join("")}
-    </div>
-    <div class="add">
-      <input id="add-word" placeholder="Nova palavra" onkeydown="handleWordInputKeydown(event)">
-      <button onclick="addWord()">Adicionar palavra</button>
     </div>
   `;
   container.appendChild(d);
@@ -263,7 +379,7 @@ function addWord(keepFocus=false){
   const word = rawValue.toUpperCase();
   const exists = WORDS.some(w => String(w).toUpperCase() === word);
   if(exists){
-    alert(`A palavra "${word}" já existe em WORDS.`);
+    showFieldError(input, `A palavra "${word}" já existe em WORDS.`);
     if(keepFocus){
       input.value = "";
       input.focus();
@@ -273,10 +389,7 @@ function addWord(keepFocus=false){
 
   const validation = validateWord(word);
   if(!validation.ok){
-    const reason = validation.errors
-      .map(e => `${e.rule}${e.item ? ` (${e.item})` : ""}: ${e.message}`)
-      .join("\n");
-    alert(`A palavra "${word}" não pode ser adicionada.\n\n${reason}`);
+    showValidationError(input, word, validation.errors);
     if(keepFocus){
       input.value = "";
       input.focus();
@@ -301,8 +414,13 @@ function removeWord(index){
 }
 
 async function saveRules(){
-  const file = await fileHandle.getFile();
-  let text = await file.text();
+  if(!fileHandle){
+    showNotice("Abra um arquivo HTML válido do jogo antes de salvar.", "error");
+    return;
+  }
+  try{
+    const file = await fileHandle.getFile();
+    let text = await file.text();
 
   const MAX_LINE_LEN = 80;
 
@@ -372,11 +490,14 @@ async function saveRules(){
     "const WORDS = " + formatArray(WORDS, 0) + ";"
   );
 
-  const w = await fileHandle.createWritable();
-  await w.write(text);
-  await w.close();
+    const w = await fileHandle.createWritable();
+    await w.write(text);
+    await w.close();
 
-  alert("Regras e WORDS salvos com sucesso!");
+    showNotice(`Regras e WORDS salvos com sucesso em ${fileHandle.name}!`, "success");
+  }catch(error){
+    showNotice(`Não foi possível salvar ${fileHandle?.name || "o arquivo"}: ${error?.message || error}`, "error");
+  }
 }
 
 function test(){
@@ -396,7 +517,7 @@ function test(){
       <ul>
         ${res.errors.map(e=>`
           <li>
-            <b>${e.rule}</b>
+            <button type="button" class="rule-link" onclick="focusRule('${e.rule}')">${e.rule}</button>
             ${e.item ? `(${e.item})` : ""}
             — ${e.message}
           </li>

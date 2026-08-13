@@ -48,22 +48,6 @@
     align-items:center;
     overflow:hidden;
   }
-  header{
-    width:100%;
-    max-width:560px;
-    display:flex;
-    align-items:center;
-    justify-content:space-between;
-    padding:14px 16px;
-    border-bottom:1px solid var(--border);
-    gap:8px;
-  }
-  header h1{
-    font-size:20px;
-    letter-spacing:.08em;
-    text-transform:uppercase;
-    margin:0;
-  }
   .btn{
     background:transparent;
     color:var(--text);
@@ -72,11 +56,6 @@
     padding:8px 10px;
     cursor:pointer;
     font-weight:600;
-  }
-  .btn.primary{
-    background:var(--accent);
-    color:#fff;
-    border:0;
   }
   .tile.cursor{
     border-color: var(--accent);
@@ -124,38 +103,9 @@
   }
   .boards-wrap.dueto{
     grid-template-columns: repeat(2, minmax(0, 1fr));
-    max-width:920px;
   }
   .boards-wrap.quarteto{
     grid-template-columns: repeat(4, minmax(0, 1fr));
-    max-width:1500px;
-    gap:10px;
-  }
-  .boards-wrap.dueto .board{
-    max-width:195px;
-    gap:4px;
-    margin-top:0;
-  }
-  .boards-wrap.quarteto .board{
-    max-width:145px;
-    gap:2px;
-    margin-top:0;
-  }
-  .boards-wrap.dueto .tile{
-    border-radius:8px;
-    font-size:1.45rem;
-  }
-  .boards-wrap.quarteto .tile{
-    border-radius:7px;
-    font-size:1rem;
-  }
-  @media (min-width:601px){
-    .boards-wrap.dueto .board{
-      max-width:min(420px, calc((100dvh - 235px) * .714));
-    }
-    .boards-wrap.quarteto .board{
-      max-width:min(330px, calc((100dvh - 235px) * .555));
-    }
   }
   .boards-wrap.mode-transition{
     animation: modeSwitch .24s ease;
@@ -206,18 +156,13 @@
   .relevant-letter.present{background:var(--present);}
   .relevant-letter.correct{background:var(--correct);}
   .boards-wrap.solo .relevant-letters{display:none;}
-  .boards-wrap.solo .board{
-    margin-top:4px;
-    max-width:272px;
-  }
-
   /* Grade */
   .board{
     display:grid;
     grid-template-columns: repeat(var(--cols,5), minmax(0, 1fr));
     width:100%;
     gap:5px;
-    margin-top:8px;
+    margin-top:0;
     touch-action:manipulation;
   }
   .tile{
@@ -256,10 +201,6 @@
   .flip{
     transform: rotateX(90deg);
     transition: transform .15s ease-in;
-  }
-  .flip.show{
-    transform: rotateX(0);
-    transition: transform .15s ease-out;
   }
   .pop{ animation: pop .08s ease-out; }
   @keyframes pop{
@@ -307,7 +248,6 @@
     text-transform:uppercase;
   }
   .key.big{ flex-grow:1.55; }
-  .key.dark{ background:var(--absent); color:#fff; }
   .key.present{ background:var(--present); color:#fff; }
   .key.correct{ background:var(--correct); color:#fff; }
   .key.manual-off,
@@ -330,7 +270,7 @@
   .key .key-symbol{
     display:inline-block;
     position:relative;
-    top:-4px;
+    top:-1px;
     transition: transform .18s ease;
   }
   .key.keyflip-delete .key-symbol{
@@ -353,101 +293,70 @@
       transform:scale(1);
     }
   }
-  @keyframes keyflashError{
-    0%{
-      background:var(--kbd-bg);
-      color:#111;
-      transform:scale(1);
-    }
-    45%{
-      background:#e05555;
-      color:#fff;
-      opacity:1;
-      transform:scale(1.04);
-    }
-    100%{
-      background:var(--kbd-bg);
-      color:#111;
-      transform:scale(1);
-    }
-  }
-
   @keyframes modeSwitch{
     0%{ opacity:.35; transform:scale(.985); }
     100%{ opacity:1; transform:scale(1); }
   }
 
-  @media (max-width:600px){
-    main{
-      max-width:none;
-      gap:8px;
-      padding-inline:6px;
-      padding-bottom:max(6px, env(safe-area-inset-bottom));
-    }
-    .topbar{
-      max-width:360px;
-      padding-top:4px;
-    }
-    .btn{padding:7px 9px;}
-    .keyboard{ gap:4px; max-width:520px; }
-    .row{ gap:3px; }
-    .key{
-      height:clamp(22px, 3.5vh, 28px);
-      padding:4px 2px;
-      font-size:clamp(10px, 3vw, 14px);
-    }
-    .boards-wrap.solo .board{max-width:252px;}
-    .board{gap:clamp(2px, .8vw, 4px);}
-    .boards-wrap.dueto{
-      grid-template-columns:repeat(2, minmax(0, 1fr));
-      max-width:500px;
-      gap:8px;
-    }
-    .boards-wrap.quarteto{
-      grid-template-columns: repeat(2, minmax(0, 1fr));
-      max-width:500px;
-      gap:6px 8px;
-      align-content:space-evenly;
-    }
-    .boards-wrap.dueto .board{
-      max-width:min(88%, 185px);
-      gap:clamp(2px, .7vw, 4px);
-    }
-    .boards-wrap.dueto .tile{
-      border-radius:clamp(4px, 1.6vw, 8px);
-      font-size:clamp(.82rem, 5vw, 1.45rem);
-    }
-    .boards-wrap.quarteto .board{
-      max-width:min(88%, calc((100dvh - 128px) * .235));
-      gap:clamp(1px, .6vw, 3px);
-    }
-    .boards-wrap.quarteto .tile{
-      border-radius:clamp(3px, 1.4vw, 7px);
-      font-size:clamp(.72rem, 4.4vw, 1.2rem);
-    }
-    .board-area{gap:clamp(2px, .7vw, 4px);}
-    .relevant-letters{
-      flex-basis:clamp(15px, 4vw, 20px);
-      width:clamp(15px, 4vw, 20px);
-      gap:2px;
-    }
-    .relevant-letter{
-      border-radius:4px;
-      font-size:clamp(.55rem, 2.5vw, .72rem);
-    }
-    .tile{padding-bottom:2px; border-width:1.5px;}
+  /* Dimensionamento unificado: os valores são calculados a partir do espaço real. */
+  main.fitted-layout{
+    gap:var(--ui-gap, 8px);
   }
-
-  @media (max-width:600px) and (orientation:landscape){
-    .boards-wrap.quarteto{
-      grid-template-columns:repeat(4, minmax(0, 1fr));
-      max-width:900px;
-      gap:6px;
-    }
-    .boards-wrap.quarteto .board{max-width:145px;}
-    .topbar{padding-top:2px;}
-    .key{height:34px; font-size:13px;}
-    .keyboard{gap:3px;}
+  main.fitted-layout .topbar{
+    padding-top:var(--top-padding, 4px);
+  }
+  main.fitted-layout .boards-wrap{
+    max-width:none;
+    gap:var(--boards-gap, 8px);
+    align-content:center;
+    align-items:center;
+    justify-content:center;
+  }
+  main.fitted-layout .board-shell{
+    width:var(--shell-width);
+    height:var(--shell-height);
+    justify-content:center;
+  }
+  main.fitted-layout .board-area{
+    width:var(--shell-width);
+    gap:var(--helper-gap, 3px);
+  }
+  main.fitted-layout .board{
+    width:var(--board-width) !important;
+    max-width:none !important;
+    margin-top:0;
+    gap:var(--tile-gap, 3px) !important;
+  }
+  main.fitted-layout .tile{
+    width:var(--tile-size);
+    height:var(--tile-size);
+    aspect-ratio:auto;
+    border-radius:var(--tile-radius, 6px) !important;
+    border-width:var(--tile-border, 2px);
+    padding-bottom:var(--tile-padding, 2px);
+    font-size:var(--tile-font) !important;
+  }
+  main.fitted-layout .relevant-letters{
+    flex-basis:var(--helper-size);
+    width:var(--helper-size);
+    gap:var(--helper-item-gap, 2px);
+  }
+  main.fitted-layout .relevant-letter{
+    font-size:var(--helper-font);
+    border-radius:var(--helper-radius, 4px);
+  }
+  main.fitted-layout .keyboard{
+    width:var(--keyboard-width);
+    max-width:none;
+    gap:var(--keyboard-gap);
+  }
+  main.fitted-layout .row{
+    gap:var(--key-gap);
+  }
+  main.fitted-layout .key{
+    height:var(--key-height);
+    padding:2px;
+    font-size:var(--key-font);
   }
 
   /* Toast / Modal */
@@ -837,23 +746,98 @@ function resetGame(){
 
   buildBoards();
   updateModeButton();
+  scheduleFitGameLayout();
 
   updateActiveRowVisual();
   updateCursor();
 
   // Limpa estado interno do teclado
   colorKeyboard.clear();
-  $$(".key").forEach(key => key.classList.remove("dark", "present", "correct", "manual-off", "discarded"));
+  $$(".key").forEach(key => key.classList.remove("present", "correct", "manual-off", "discarded"));
 
-  updateInfo();
 }
 
-function updateInfo(){
-  const info = $("#info");
-  if(!info) return;
-  if(!gameOver){
-    info.innerHTML = `Acerte ${modeCfg().boards === 2 ? "as duas palavras" : "a palavra"} de <b>${WORD_LENGTH}</b> letras em até <b>${getMaxTries()}</b> tentativas.`;
-  }
+function fitGameLayout(){
+  const main = document.querySelector("main");
+  const wrap = $("#boardsWrap");
+  const keyboard = $("#keyboard");
+  const topbar = document.querySelector(".topbar");
+  if(!main || !wrap || !keyboard || !topbar || !boardsState.length) return;
+
+  const viewportWidth = document.documentElement.clientWidth;
+  const viewportHeight = window.visualViewport?.height || document.documentElement.clientHeight;
+  const compact = viewportWidth <= 600;
+  const outerX = compact ? 6 : 12;
+  const outerBottom = compact ? 6 : 10;
+  const uiGap = compact ? 6 : 10;
+  const topPadding = compact ? 3 : 6;
+  const usableWidth = Math.max(220, Math.min(viewportWidth, 1600) - outerX * 2 - 8);
+
+  const keyHeight = Math.max(22, Math.min(compact ? 30 : 40, viewportHeight * (compact ? .035 : .048)));
+  const keyboardGap = Math.max(2, Math.min(5, keyHeight * .12));
+  const keyboardHeight = keyHeight * 3 + keyboardGap * 2;
+  const keyboardWidth = Math.min(usableWidth, Math.max(280, Math.min(620, viewportWidth * (compact ? .99 : .46))));
+  const topbarHeight = Math.max(32, topbar.scrollHeight || 36) + topPadding;
+  const availableBoardsHeight = Math.max(120, viewportHeight - outerBottom - topbarHeight - keyboardHeight - uiGap * 2);
+
+  const boardCount = modeCfg().boards;
+  const tries = getMaxTries();
+  const helpers = boardCount > 1;
+  const candidates = boardCount === 4 ? [4, 2, 1] : boardCount === 2 ? [2, 1] : [1];
+  let best = null;
+
+  candidates.forEach(columns => {
+    const rows = Math.ceil(boardCount / columns);
+    const boardsGap = Math.max(4, Math.min(12, usableWidth * .012));
+    const tileGap = Math.max(1, Math.min(5, usableWidth * .004));
+    const helperGap = helpers ? Math.max(2, Math.min(5, usableWidth * .004)) : 0;
+    const helperRatio = helpers ? .55 : 0;
+    const widthPerShell = (usableWidth - boardsGap * (columns - 1)) / columns;
+    const tileByWidth = (widthPerShell - tileGap * (WORD_LENGTH - 1) - helperGap) / (WORD_LENGTH + helperRatio);
+    const tileByHeight = (availableBoardsHeight / rows - boardsGap - tileGap * (tries - 1)) / tries;
+    const tile = Math.floor(Math.min(tileByWidth, tileByHeight, compact ? 56 : 68));
+    if(tile < 12) return;
+    const helperSize = helpers ? Math.max(12, Math.round(tile * helperRatio)) : 0;
+    const boardWidth = tile * WORD_LENGTH + tileGap * (WORD_LENGTH - 1);
+    const shellWidth = boardWidth + (helpers ? helperGap + helperSize : 0);
+    const shellHeight = tile * tries + tileGap * (tries - 1);
+    const totalWidth = shellWidth * columns + boardsGap * (columns - 1);
+    const totalHeight = shellHeight * rows + boardsGap * (rows - 1);
+    if(totalWidth <= usableWidth + 1 && totalHeight <= availableBoardsHeight + 1 && (!best || tile > best.tile)){
+      best = { columns, rows, boardsGap, tileGap, helperGap, helperSize, boardWidth, shellWidth, shellHeight, tile };
+    }
+  });
+
+  if(!best) return;
+  main.classList.add("fitted-layout");
+  main.style.setProperty("--ui-gap", `${uiGap}px`);
+  main.style.setProperty("--top-padding", `${topPadding}px`);
+  main.style.setProperty("--boards-gap", `${best.boardsGap}px`);
+  main.style.setProperty("--tile-gap", `${best.tileGap}px`);
+  main.style.setProperty("--tile-size", `${best.tile}px`);
+  main.style.setProperty("--tile-font", `${Math.max(12, Math.min(32, best.tile * .55))}px`);
+  main.style.setProperty("--tile-radius", `${Math.max(3, Math.min(10, best.tile * .16))}px`);
+  main.style.setProperty("--tile-border", `${best.tile < 26 ? 1 : 2}px`);
+  main.style.setProperty("--tile-padding", `${Math.max(0, best.tile * .06)}px`);
+  main.style.setProperty("--board-width", `${best.boardWidth}px`);
+  main.style.setProperty("--shell-width", `${best.shellWidth}px`);
+  main.style.setProperty("--shell-height", `${best.shellHeight}px`);
+  main.style.setProperty("--helper-gap", `${best.helperGap}px`);
+  main.style.setProperty("--helper-size", `${best.helperSize}px`);
+  main.style.setProperty("--helper-font", `${Math.max(8, Math.min(16, best.helperSize * .58))}px`);
+  main.style.setProperty("--helper-item-gap", `${Math.max(1, best.tileGap * .6)}px`);
+  main.style.setProperty("--keyboard-width", `${keyboardWidth}px`);
+  main.style.setProperty("--key-height", `${keyHeight}px`);
+  main.style.setProperty("--keyboard-gap", `${keyboardGap}px`);
+  main.style.setProperty("--key-gap", `${Math.max(2, keyboardGap)}px`);
+  main.style.setProperty("--key-font", `${Math.max(12, Math.min(23, keyHeight * .62))}px`);
+  wrap.style.gridTemplateColumns = `repeat(${best.columns}, ${best.shellWidth}px)`;
+}
+
+let fitLayoutFrame;
+function scheduleFitGameLayout(){
+  cancelAnimationFrame(fitLayoutFrame);
+  fitLayoutFrame = requestAnimationFrame(fitGameLayout);
 }
 
 /* ===================== ENTRADA ===================== */
@@ -1365,7 +1349,7 @@ function paintKeyboardKey(letter, state){
   if(colorPriority[state] >= prevPrio){
     colorKeyboard.set(letter, state);
     if(keyBtn){
-      keyBtn.classList.remove("dark","present","correct","discarded");
+      keyBtn.classList.remove("present","correct","discarded");
       if(state === "absent") keyBtn.classList.add("discarded");
       if(state === "present") keyBtn.classList.add("present");
       if(state === "correct") keyBtn.classList.add("correct");
@@ -1377,7 +1361,7 @@ function updateKeyboardKey(letter, state){
 }
 function rebuildKeyboardFromActiveBoards(){
   colorKeyboard.clear();
-  $$(".key").forEach(key => key.classList.remove("dark","present","correct","discarded"));
+  $$(".key").forEach(key => key.classList.remove("present","correct","discarded"));
   const sourceBoards = modeCfg().boards > 1 ? getPlayableBoards() : boardsState;
   sourceBoards.forEach(board => {
     board.revealed.forEach(({ guess, outcome }) => {
@@ -1487,6 +1471,8 @@ $("#btnAgain").addEventListener("click", ()=>{
 $("#btnMode").addEventListener("click", ()=>{
   toggleMode();
 });
+window.addEventListener("resize", scheduleFitGameLayout);
+window.visualViewport?.addEventListener("resize", scheduleFitGameLayout);
 document.addEventListener("keydown", (e) => {
   if(e.defaultPrevented) return;
   if(e.ctrlKey || e.metaKey || e.altKey) return;
