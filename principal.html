@@ -69,8 +69,8 @@
     width:100%;
     max-width:1600px;
     min-width:0;
-    height:100vh;
-    height:100dvh;
+    height:var(--app-height, 100vh);
+    height:var(--app-height, 100dvh);
     display:flex;
     flex-direction:column;
     align-items:center;
@@ -132,7 +132,7 @@
     z-index:10;
     top:calc(100% + 6px);
     left:50%;
-    width:min(190px, calc(100vw - 24px));
+    width:min(190px, calc(100dvw - 8px));
     transform:translateX(-50%);
     display:grid;
     gap:4px;
@@ -365,9 +365,34 @@
   /* Dimensionamento unificado: os valores são calculados a partir do espaço real. */
   main.fitted-layout{
     gap:var(--ui-gap, 8px);
+    padding-left:var(--outer-x, 12px);
+    padding-right:var(--outer-x, 12px);
+    padding-bottom:var(--outer-bottom, 10px);
   }
   main.fitted-layout .topbar{
     padding-top:var(--top-padding, 4px);
+    max-width:min(420px, 100%);
+    grid-template-columns:var(--top-control-size, 40px) minmax(0, 1fr) auto;
+    gap:var(--topbar-gap, 8px);
+    font-size:var(--topbar-font, 1rem);
+  }
+  main.fitted-layout .topbar .btn{
+    min-height:var(--top-control-height, 36px);
+    padding:var(--top-control-padding, 6px);
+  }
+  main.fitted-layout .topbar > .btn,
+  main.fitted-layout .topbar > .mode-picker,
+  main.fitted-layout .topbar > .mode-picker > summary,
+  main.fitted-layout .topbar-actions > .btn{
+    height:var(--top-control-height, 36px);
+  }
+  main.fitted-layout .topbar-actions{
+    height:var(--top-control-height, 36px);
+    gap:var(--topbar-gap, 8px);
+  }
+  main.fitted-layout .icon-btn{
+    width:var(--top-control-size, 40px);
+    font-size:var(--top-icon-font, 1.15rem);
   }
   main.fitted-layout .boards-wrap{
     max-width:none;
@@ -448,8 +473,9 @@
     padding:16px;
     background:var(--bg);
     color:var(--text);
-    width:min(92vw, 520px);
-    max-height:calc(100dvh - 24px);
+    width:min(calc(100dvw - 12px), 520px);
+    max-width:calc(100dvw - 4px);
+    max-height:calc(100dvh - 8px);
     overflow:auto;
   }
   dialog::backdrop{ background: rgba(0,0,0,.5); }
@@ -483,8 +509,8 @@
     margin-left:auto;
   }
   #dlgHelp{
-    width:min(94vw, 800px);
-    max-height:calc(100dvh - 12px);
+    width:min(calc(100dvw - 6px), 800px);
+    max-height:calc(100dvh - 4px);
     overflow:hidden;
     padding:clamp(8px, 2vmin, 16px);
   }
@@ -504,8 +530,8 @@
   }
   .about-image{
     display:block;
-    width:min(100%, 220px);
-    max-height:220px;
+    width:min(100%, 220px, 42dvh);
+    max-height:min(220px, 42dvh);
     object-fit:cover;
     margin:18px auto 14px;
     border-radius:10px;
@@ -585,6 +611,36 @@
     .help-example{--help-tile-size:16px; gap:2px; margin:1px 0;}
     .shortcut-list{gap:0 4px;}
     kbd{font-size:.52rem; padding:0 2px;}
+  }
+  @media (max-height:440px){
+    #dlgHelp{padding:3px 6px;}
+    #dlgHelp .dialog-header{min-height:27px;}
+    #dlgHelp .dialog-header h2{font-size:clamp(1rem, 8dvh, 1.35rem);}
+    #dlgHelp .dialog-header .icon-btn{width:25px; min-height:25px; padding:2px;}
+    .help-layout{grid-template-columns:minmax(0, 1fr) minmax(0, 1fr); gap:5px;}
+    .help-copy{font-size:clamp(.52rem, 2.6dvh, .72rem); line-height:1.16;}
+    .help-copy p{margin:2px 0;}
+    .help-example{--help-tile-size:clamp(13px, 7dvh, 18px); gap:1px; margin:1px 0;}
+    .help-shortcuts{padding-top:0;}
+    .shortcut-list{gap:0 4px;}
+    kbd{font-size:clamp(.42rem, 2.2dvh, .56rem); padding:0 2px; line-height:1.05;}
+  }
+  @media (max-height:280px){
+    #dlgHelp{padding:2px 4px; border-radius:6px;}
+    #dlgHelp .dialog-header{min-height:max(5px, 10dvh);}
+    #dlgHelp .dialog-header h2{font-size:max(3px, min(8dvh, 5dvw));}
+    #dlgHelp .dialog-header .icon-btn{
+      width:max(6px, 10dvh);
+      min-height:max(6px, 10dvh);
+      height:max(6px, 10dvh);
+      padding:0;
+      font-size:max(3px, min(5dvh, 4dvw));
+    }
+    .help-layout{gap:3px;}
+    .help-copy{font-size:max(.75px, min(2.65dvh, 1.5dvw)); line-height:1.06;}
+    .help-example{--help-tile-size:max(2px, min(7dvh, 5dvw));}
+    .shortcut-list{gap:0 2px;}
+    kbd{font-size:max(.65px, min(2.2dvh, 1.25dvw)); border-bottom-width:1px; padding:0 1px;}
   }
   @media (max-width:420px){
     .stats{grid-template-columns:repeat(2, 1fr);}
@@ -1200,21 +1256,33 @@ function fitGameLayout(){
   const topbar = document.querySelector(".topbar");
   if(!main || !wrap || !keyboard || !topbar || !boardsState.length) return;
 
-  const viewportWidth = document.documentElement.clientWidth;
-  const viewportHeight = window.visualViewport?.height || document.documentElement.clientHeight;
+  const visualViewport = window.visualViewport;
+  const viewportWidth = Math.max(1, Math.min(
+    document.documentElement.clientWidth,
+    visualViewport?.width || Number.POSITIVE_INFINITY
+  ));
+  const viewportHeight = Math.max(1, Math.min(
+    document.documentElement.clientHeight,
+    visualViewport?.height || Number.POSITIVE_INFINITY
+  ));
   const compact = viewportWidth <= 600;
-  const outerX = compact ? 6 : 12;
-  const outerBottom = compact ? 6 : 10;
-  const uiGap = compact ? 6 : 10;
-  const topPadding = compact ? 3 : 6;
-  const usableWidth = Math.max(220, Math.min(viewportWidth, 1600) - outerX * 2 - 8);
+  const extreme = viewportWidth < 320 || viewportHeight < 360;
+  const outerX = extreme ? Math.max(1, Math.min(3, viewportWidth * .012)) : compact ? 6 : 12;
+  const outerBottom = extreme ? Math.max(1, Math.min(3, viewportHeight * .012)) : compact ? 6 : 10;
+  const uiGap = extreme ? Math.max(1, Math.min(3, viewportHeight * .012)) : compact ? 6 : 10;
+  const topPadding = extreme ? Math.max(0, Math.min(2, viewportHeight * .008)) : compact ? 3 : 6;
+  const topbarGap = extreme ? Math.max(1, Math.min(4, viewportWidth * .012)) : 8;
+  const usableWidth = Math.max(1, Math.min(viewportWidth, 1600) - outerX * 2);
 
-  const keyHeight = Math.max(22, Math.min(compact ? 30 : 40, viewportHeight * (compact ? .035 : .048)));
-  const keyboardGap = Math.max(2, Math.min(5, keyHeight * .12));
+  const topControlHeight = Math.max(8, Math.min(36, viewportHeight * .09, viewportWidth * .13));
+  const topControlSize = Math.max(10, Math.min(40, topControlHeight * 1.12));
+  const keyHeight = Math.max(4, Math.min(compact ? 30 : 40, viewportHeight * (extreme ? .055 : compact ? .04 : .048)));
+  const keyboardGap = Math.max(.5, Math.min(5, keyHeight * .12));
   const keyboardHeight = keyHeight * 3 + keyboardGap * 2;
-  const keyboardWidth = Math.min(usableWidth, Math.max(280, Math.min(620, viewportWidth * (compact ? .99 : .46))));
-  const topbarHeight = Math.max(32, topbar.scrollHeight || 36) + topPadding;
-  const availableBoardsHeight = Math.max(120, viewportHeight - outerBottom - topbarHeight - keyboardHeight - uiGap * 2);
+  const keyboardWidth = Math.max(1, Math.min(usableWidth, 620, viewportWidth * (compact ? .99 : .46)));
+  const topbarHeight = topControlHeight + topPadding;
+  const availableBoardsHeight = Math.max(1, viewportHeight - outerBottom - topbarHeight - keyboardHeight - uiGap * 2);
+  document.documentElement.style.setProperty("--app-height", `${viewportHeight}px`);
 
   const boardCount = modeCfg().boards;
   const tries = getMaxTries();
@@ -1224,16 +1292,17 @@ function fitGameLayout(){
 
   candidates.forEach(columns => {
     const rows = Math.ceil(boardCount / columns);
-    const boardsGap = Math.max(4, Math.min(12, usableWidth * .012));
-    const tileGap = Math.max(1, Math.min(5, usableWidth * .004));
-    const helperGap = helpers ? Math.max(2, Math.min(5, usableWidth * .004)) : 0;
+    const boardsGap = Math.max(.5, Math.min(12, usableWidth * .012, availableBoardsHeight * .025));
+    const tileGap = Math.max(.5, Math.min(5, usableWidth * .004, availableBoardsHeight * .008));
+    const helperGap = helpers ? Math.max(.5, Math.min(5, usableWidth * .004)) : 0;
     const helperRatio = helpers ? .55 : 0;
     const widthPerShell = (usableWidth - boardsGap * (columns - 1)) / columns;
     const tileByWidth = (widthPerShell - tileGap * (WORD_LENGTH - 1) - helperGap) / (WORD_LENGTH + helperRatio);
-    const tileByHeight = (availableBoardsHeight / rows - boardsGap - tileGap * (tries - 1)) / tries;
-    const tile = Math.floor(Math.min(tileByWidth, tileByHeight, compact ? 56 : 68));
-    if(tile < 12) return;
-    const helperSize = helpers ? Math.max(12, Math.round(tile * helperRatio)) : 0;
+    const shellHeightAvailable = (availableBoardsHeight - boardsGap * (rows - 1)) / rows;
+    const tileByHeight = (shellHeightAvailable - tileGap * (tries - 1)) / tries;
+    const tile = Math.floor(Math.min(tileByWidth, tileByHeight, compact ? 56 : 68) * 10) / 10;
+    if(tile < .5) return;
+    const helperSize = helpers ? Math.max(.5, Math.round(tile * helperRatio * 10) / 10) : 0;
     const boardWidth = tile * WORD_LENGTH + tileGap * (WORD_LENGTH - 1);
     const shellWidth = boardWidth + (helpers ? helperGap + helperSize : 0);
     const shellHeight = tile * tries + tileGap * (tries - 1);
@@ -1246,27 +1315,35 @@ function fitGameLayout(){
 
   if(!best) return;
   main.classList.add("fitted-layout");
+  main.style.setProperty("--outer-x", `${outerX}px`);
+  main.style.setProperty("--outer-bottom", `${outerBottom}px`);
   main.style.setProperty("--ui-gap", `${uiGap}px`);
   main.style.setProperty("--top-padding", `${topPadding}px`);
+  main.style.setProperty("--topbar-gap", `${topbarGap}px`);
+  main.style.setProperty("--top-control-height", `${topControlHeight}px`);
+  main.style.setProperty("--top-control-size", `${topControlSize}px`);
+  main.style.setProperty("--top-control-padding", `${Math.max(1, Math.min(8, topControlHeight * .2))}px`);
+  main.style.setProperty("--topbar-font", `${Math.max(4, Math.min(16, topControlHeight * .44))}px`);
+  main.style.setProperty("--top-icon-font", `${Math.max(4, Math.min(18, topControlHeight * .5))}px`);
   main.style.setProperty("--boards-gap", `${best.boardsGap}px`);
   main.style.setProperty("--tile-gap", `${best.tileGap}px`);
   main.style.setProperty("--tile-size", `${best.tile}px`);
-  main.style.setProperty("--tile-font", `${Math.max(12, Math.min(32, best.tile * .55))}px`);
-  main.style.setProperty("--tile-radius", `${Math.max(3, Math.min(10, best.tile * .16))}px`);
-  main.style.setProperty("--tile-border", `${best.tile < 26 ? 1 : 2}px`);
+  main.style.setProperty("--tile-font", `${Math.max(.5, Math.min(32, best.tile * .55))}px`);
+  main.style.setProperty("--tile-radius", `${Math.max(.5, Math.min(10, best.tile * .16))}px`);
+  main.style.setProperty("--tile-border", `${best.tile < 3 ? .5 : best.tile < 26 ? 1 : 2}px`);
   main.style.setProperty("--tile-padding", `${Math.max(0, best.tile * .06)}px`);
   main.style.setProperty("--board-width", `${best.boardWidth}px`);
   main.style.setProperty("--shell-width", `${best.shellWidth}px`);
   main.style.setProperty("--shell-height", `${best.shellHeight}px`);
   main.style.setProperty("--helper-gap", `${best.helperGap}px`);
   main.style.setProperty("--helper-size", `${best.helperSize}px`);
-  main.style.setProperty("--helper-font", `${Math.max(8, Math.min(16, best.helperSize * .58))}px`);
-  main.style.setProperty("--helper-item-gap", `${Math.max(1, best.tileGap * .6)}px`);
+  main.style.setProperty("--helper-font", `${Math.max(.5, Math.min(16, best.helperSize * .58))}px`);
+  main.style.setProperty("--helper-item-gap", `${Math.max(.5, best.tileGap * .6)}px`);
   main.style.setProperty("--keyboard-width", `${keyboardWidth}px`);
   main.style.setProperty("--key-height", `${keyHeight}px`);
   main.style.setProperty("--keyboard-gap", `${keyboardGap}px`);
-  main.style.setProperty("--key-gap", `${Math.max(2, keyboardGap)}px`);
-  main.style.setProperty("--key-font", `${Math.max(12, Math.min(23, keyHeight * .62))}px`);
+  main.style.setProperty("--key-gap", `${Math.max(.5, keyboardGap)}px`);
+  main.style.setProperty("--key-font", `${Math.max(2.5, Math.min(23, keyHeight * .62))}px`);
   wrap.style.gridTemplateColumns = `repeat(${best.columns}, ${best.shellWidth}px)`;
 }
 
@@ -2042,6 +2119,15 @@ document.addEventListener("click", (e)=>{
 });
 window.addEventListener("resize", scheduleFitGameLayout);
 window.visualViewport?.addEventListener("resize", scheduleFitGameLayout);
+window.visualViewport?.addEventListener("scroll", scheduleFitGameLayout, {passive:true});
+window.addEventListener("orientationchange", scheduleFitGameLayout);
+if("ResizeObserver" in window){
+  const layoutResizeObserver = new ResizeObserver(scheduleFitGameLayout);
+  [document.documentElement, document.querySelector(".topbar"), $("#keyboard")]
+    .filter(Boolean)
+    .forEach(element => layoutResizeObserver.observe(element));
+}
+document.fonts?.ready.then(scheduleFitGameLayout);
 window.addEventListener("beforeunload", saveModeState);
 document.addEventListener("keydown", (e) => {
   if(e.defaultPrevented) return;
@@ -2117,4 +2203,3 @@ if(!restoreModeState(getSavedModeState(currentMode))) resetGame();
 </script>
 </body>
 </html>
-
