@@ -120,6 +120,10 @@
     width:100%;
     list-style:none;
   }
+  .mode-label{
+    display:inline-block;
+    line-height:1;
+  }
   .mode-picker summary::-webkit-details-marker{display:none;}
   .mode-picker summary::after{
     content:"▾";
@@ -287,6 +291,7 @@
     max-width:560px;
     min-width:0;
     flex:0 0 auto;
+    transform:translateX(var(--keyboard-offset, 0px));
   }
   .row{
     display:flex;
@@ -312,6 +317,14 @@
     text-transform:uppercase;
   }
   .key.big{ flex-grow:1.55; }
+  .row:last-child .key:not(.big){ flex-grow:.82; }
+  .row:last-child .key.big{
+    flex-grow:2.25;
+    padding-left:2px;
+    padding-right:2px;
+    font-size:.78em;
+    white-space:nowrap;
+  }
   .key.present{ background:var(--present); color:#fff; }
   .key.correct{ background:var(--correct); color:#fff; }
   .key.manual-off,
@@ -446,6 +459,133 @@
     height:var(--key-height);
     padding:2px;
     font-size:var(--key-font);
+  }
+  main.fitted-layout .row:last-child .key.big{
+    padding-left:2px;
+    padding-right:2px;
+    font-size:var(--key-enter-font);
+  }
+  main.fitted-layout[data-controls-layout="rail"],
+  main.fitted-layout[data-controls-layout="split"]{
+    position:relative;
+  }
+  main.fitted-layout[data-controls-layout="rail"] .topbar,
+  main.fitted-layout[data-controls-layout="split"] .topbar{
+    position:absolute;
+    z-index:4;
+    max-width:none;
+    padding-top:0;
+    pointer-events:none;
+  }
+  main.fitted-layout[data-controls-layout="rail"] .topbar > *,
+  main.fitted-layout[data-controls-layout="split"] .topbar > *{
+    pointer-events:auto;
+  }
+
+  /* Trilho estreito: todos os controles em uma coluna; o modo usa texto vertical. */
+  main.fitted-layout[data-controls-layout="rail"] .topbar{
+    top:var(--rail-top);
+    left:var(--outer-x);
+    width:var(--rail-width);
+    display:flex;
+    flex-direction:column;
+    gap:2px;
+  }
+  main.fitted-layout[data-controls-layout="rail"] .topbar > .btn,
+  main.fitted-layout[data-controls-layout="rail"] .topbar > .mode-picker,
+  main.fitted-layout[data-controls-layout="rail"] .topbar > .mode-picker > summary,
+  main.fitted-layout[data-controls-layout="rail"] .topbar-actions > .btn{
+    width:100%;
+  }
+  main.fitted-layout[data-controls-layout="rail"] .topbar > .mode-picker,
+  main.fitted-layout[data-controls-layout="rail"] .topbar > .mode-picker > summary{
+    height:var(--rail-mode-height);
+  }
+  main.fitted-layout[data-controls-layout="rail"] #btnMode{
+    flex-direction:column;
+    align-items:center;
+    justify-content:center;
+    gap:3px;
+    padding:4px 2px;
+  }
+  main.fitted-layout[data-controls-layout="rail"] #btnMode .mode-label{
+    writing-mode:vertical-rl;
+    text-orientation:mixed;
+    transform:rotate(180deg);
+    white-space:nowrap;
+  }
+  main.fitted-layout[data-controls-layout="rail"] #btnMode::after{
+    flex:0 0 auto;
+    line-height:1;
+    transform:rotate(-90deg);
+  }
+  main.fitted-layout[data-controls-layout="rail"] .mode-picker[open] #btnMode::after{
+    transform:rotate(90deg);
+  }
+  main.fitted-layout[data-controls-layout="rail"] .topbar-actions{
+    width:100%;
+    height:auto;
+    flex-direction:column;
+    gap:2px;
+  }
+  main.fitted-layout[data-controls-layout="rail"] .mode-menu{
+    top:0;
+    left:calc(100% + 2px);
+    transform:none;
+  }
+  main.fitted-layout[data-controls-layout="rail"] .boards-wrap{
+    width:calc(100% - var(--rail-width) - 2px);
+    align-self:flex-end;
+  }
+
+  /* Duas colunas laterais: ajuda/modo à esquerda e ações à direita. */
+  main.fitted-layout[data-controls-layout="split"] .topbar{
+    top:var(--side-top);
+    left:var(--outer-x);
+    right:var(--outer-x);
+    width:auto;
+    display:grid;
+    grid-template-columns:var(--split-width) minmax(0, 1fr) var(--split-width);
+    grid-template-rows:repeat(2, var(--top-control-height));
+    gap:2px 0;
+  }
+  main.fitted-layout[data-controls-layout="split"] .topbar > .btn{
+    grid-column:1;
+    grid-row:1;
+    width:var(--top-control-size);
+    justify-self:center;
+  }
+  main.fitted-layout[data-controls-layout="split"] .topbar > .mode-picker{
+    grid-column:1;
+    grid-row:2;
+    width:100%;
+    height:var(--top-control-height);
+  }
+  main.fitted-layout[data-controls-layout="split"] .topbar > .mode-picker > summary{
+    width:100%;
+    height:100%;
+  }
+  main.fitted-layout[data-controls-layout="split"] .topbar-actions{
+    grid-column:3;
+    grid-row:1 / span 2;
+    width:100%;
+    height:auto;
+    flex-direction:column;
+    align-items:center;
+    gap:2px;
+  }
+  main.fitted-layout[data-controls-layout="split"] .topbar-actions > .btn{
+    width:var(--top-control-size);
+    height:var(--top-control-height);
+  }
+  main.fitted-layout[data-controls-layout="split"] .mode-menu{
+    top:0;
+    left:calc(100% + 2px);
+    transform:none;
+  }
+  main.fitted-layout[data-controls-layout="split"] .boards-wrap{
+    width:calc(100% - var(--split-reserved-width));
+    align-self:center;
   }
 
   /* Toast / Modal */
@@ -660,7 +800,7 @@
     <div class="topbar">
       <button class="btn icon-btn" id="btnHelp" aria-label="Como jogar">?</button>
       <details class="mode-picker" id="modePicker">
-        <summary class="btn" id="btnMode">Solo</summary>
+        <summary class="btn" id="btnMode"><span class="mode-label">Solo</span></summary>
         <div class="mode-menu" role="menu" aria-label="Escolher modo de jogo">
           <button class="btn mode-option" data-mode="solo" role="menuitem">Solo</button>
           <button class="btn mode-option" data-mode="dueto" role="menuitem">Dueto</button>
@@ -1021,7 +1161,9 @@ function pickSolution(){
 function updateModeButton(){
   const btn = $("#btnMode");
   if(!btn) return;
-  btn.textContent = modeCfg().label;
+  const label = btn.querySelector(".mode-label");
+  if(label) label.textContent = modeCfg().label;
+  btn.setAttribute("aria-label", `Modo: ${modeCfg().label}`);
   $$(".mode-option").forEach(option => {
     const active = option.dataset.mode === currentMode;
     option.classList.toggle("active", active);
@@ -1249,6 +1391,158 @@ function resetGame(){
   saveModeState();
 }
 
+function clampLayout(min, value, max){
+  return Math.max(min, Math.min(max, value));
+}
+
+function solveBoardGrid({ availableWidth, availableHeight, boardCount, tries }){
+  // Inclui o padding de 4px do contêiner em cada lateral no cálculo.
+  const innerWidth = Math.max(1, availableWidth - 8);
+  const innerHeight = Math.max(1, availableHeight - 4);
+  const helpers = boardCount > 1;
+  const columnOptions = boardCount === 4 ? [4, 2, 1] : boardCount === 2 ? [2, 1] : [1];
+  let best = null;
+
+  columnOptions.forEach(columns => {
+    const rows = Math.ceil(boardCount / columns);
+    const boardsGap = clampLayout(.5, Math.min(innerWidth * .012, innerHeight * .025), 12);
+    const tileGap = clampLayout(.5, Math.min(innerWidth * .004, innerHeight * .008), 5);
+    const helperGap = helpers ? clampLayout(.5, innerWidth * .004, 5) : 0;
+    const helperRatio = helpers ? .55 : 0;
+    const widthPerShell = (innerWidth - boardsGap * (columns - 1)) / columns;
+    const tileByWidth = (widthPerShell - tileGap * (WORD_LENGTH - 1) - helperGap) / (WORD_LENGTH + helperRatio);
+    const shellHeightAvailable = (innerHeight - boardsGap * (rows - 1)) / rows;
+    const tileByHeight = (shellHeightAvailable - tileGap * (tries - 1)) / tries;
+    const tile = Math.floor(Math.min(tileByWidth, tileByHeight, 68) * 10) / 10;
+    if(!Number.isFinite(tile) || tile < .5) return;
+
+    const helperSize = helpers ? Math.max(.5, Math.round(tile * helperRatio * 10) / 10) : 0;
+    const boardWidth = tile * WORD_LENGTH + tileGap * (WORD_LENGTH - 1);
+    const shellWidth = boardWidth + (helpers ? helperGap + helperSize : 0);
+    const shellHeight = tile * tries + tileGap * (tries - 1);
+    const totalWidth = shellWidth * columns + boardsGap * (columns - 1);
+    const totalHeight = shellHeight * rows + boardsGap * (rows - 1);
+    if(totalWidth > innerWidth + .5 || totalHeight > innerHeight + .5) return;
+
+    const fill = (totalWidth * totalHeight) / Math.max(1, innerWidth * innerHeight);
+    const result = {
+      columns, rows, boardsGap, tileGap, helperGap, helperSize,
+      boardWidth, shellWidth, shellHeight, totalWidth, totalHeight, tile, fill
+    };
+    if(!best || tile > best.tile + .05 || (Math.abs(tile - best.tile) <= .05 && fill > best.fill)) best = result;
+  });
+
+  return best;
+}
+
+function computeGameLayout({ viewportWidth, viewportHeight, boardCount, tries, modeLabel, previousLayout, previousMode, mode }){
+  const mainWidth = Math.min(viewportWidth, 1600);
+  const shortestSide = Math.min(viewportWidth, viewportHeight);
+  const outerX = clampLayout(2, shortestSide * .018, 12);
+  const outerBottom = clampLayout(1, viewportHeight * .006, 4);
+  const uiGap = clampLayout(1, shortestSide * .006, 4);
+  const topPadding = clampLayout(1, viewportHeight * .012, 8);
+  const topbarGap = clampLayout(2, shortestSide * .018, 8);
+  const usableWidth = Math.max(1, mainWidth - outerX * 2);
+
+  const topControlHeight = clampLayout(18, Math.min(viewportHeight * .095, viewportWidth * .1), 36);
+  const topControlSize = clampLayout(18, topControlHeight * 1.12, 40);
+  const topbarFont = clampLayout(8, topControlHeight * .44, 16);
+  const keyHeight = clampLayout(12, Math.min(viewportHeight * .066, viewportWidth * .105), 44);
+  const keyboardGap = clampLayout(.5, keyHeight * .1, 2);
+  const keyboardHeight = keyHeight * 3 + keyboardGap * 2;
+
+  // Cresce até os limites físicos, mantendo no mínimo 15% livres à esquerda.
+  const keyboardLeftGutter = viewportWidth * .15;
+  const contentLeft = (viewportWidth - mainWidth) / 2 + outerX;
+  const keyboardRight = Math.min(viewportWidth - 2, (viewportWidth + mainWidth) / 2);
+  const naturalKeyboardWidth = Math.max(1, Math.min(usableWidth, 620));
+  const keyboardWidth = Math.max(1, Math.min(naturalKeyboardWidth, keyboardRight - keyboardLeftGutter));
+  const naturalKeyboardLeft = contentLeft + (usableWidth - keyboardWidth) / 2;
+  const keyboardOffset = Math.max(0, keyboardLeftGutter - naturalKeyboardLeft);
+
+  const topbarHeight = topPadding + topControlHeight;
+  const sideStageHeight = Math.max(1, viewportHeight - outerBottom - keyboardHeight - uiGap);
+  const topStageHeight = Math.max(1, sideStageHeight - topbarHeight - uiGap);
+  const railWidth = topControlSize;
+  const modeTextLength = String(modeLabel || "Quarteto").length;
+  const railModeHeight = clampLayout(
+    topControlHeight * 1.8,
+    modeTextLength * topbarFont * .64 + topbarFont * .9 + topControlHeight * .35 + 6,
+    110
+  );
+  const railControlsHeight = topControlHeight * 3 + railModeHeight + 6;
+  const splitWidth = clampLayout(
+    topControlSize,
+    modeTextLength * topbarFont * .62 + 28,
+    120
+  );
+  const splitReservedWidth = (splitWidth + 2) * 2;
+  const splitControlsHeight = topControlHeight * 2 + 2;
+
+  const specs = [
+    { name:"top", width:usableWidth, height:topStageHeight, valid:true, penalty:0 },
+    {
+      name:"rail",
+      width:usableWidth - railWidth - 2,
+      height:sideStageHeight,
+      valid:railControlsHeight <= sideStageHeight,
+      penalty:60
+    },
+    {
+      name:"split",
+      width:usableWidth - splitReservedWidth,
+      height:sideStageHeight,
+      valid:splitControlsHeight <= sideStageHeight,
+      penalty:35
+    }
+  ];
+
+  // Acima de um tamanho confortável, pixels extras nos quadrados deixam de
+  // justificar mover controles para as laterais. Isso preserva o topo padrão
+  // sempre que ele já oferece boa leitura e boa área de toque.
+  const comfortableTile = clampLayout(38, shortestSide * .1, 54);
+  const candidates = specs.flatMap(spec => {
+    if(!spec.valid || spec.width <= 10 || spec.height <= 10) return [];
+    const board = solveBoardGrid({
+      availableWidth:spec.width,
+      availableHeight:spec.height,
+      boardCount,
+      tries
+    });
+    if(!board) return [];
+    const tileUtility = Math.min(board.tile, comfortableTile) * 1000;
+    return [{ ...spec, board, score:tileUtility + board.tile + board.fill - spec.penalty }];
+  });
+  if(!candidates.length) return null;
+
+  candidates.sort((a, b) => b.score - a.score);
+  let chosen = candidates[0];
+  if(previousMode === mode){
+    const previous = candidates.find(candidate => candidate.name === previousLayout);
+    const tolerance = Math.max(80, chosen.board.tile * 30);
+    const standardTopIsComfortable = chosen.name === "top" && chosen.board.tile >= comfortableTile;
+    if(previous && !standardTopIsComfortable && previous.score >= chosen.score - tolerance) chosen = previous;
+  }
+
+  const boardTop = Math.max(topPadding, (chosen.height - chosen.board.totalHeight - 4) / 2);
+  const railTop = Math.max(topPadding, (sideStageHeight - railControlsHeight) / 2);
+  const sideTop = Math.max(topPadding, Math.min(boardTop, (sideStageHeight - splitControlsHeight) / 2));
+
+  return {
+    controlsLayout:chosen.name,
+    board:chosen.board,
+    boardRegionWidth:chosen.width,
+    boardRegionHeight:chosen.height,
+    candidates,
+    outerX, outerBottom, uiGap, topPadding, topbarGap,
+    topControlHeight, topControlSize, topbarFont,
+    railWidth, railModeHeight, railTop,
+    splitWidth, splitReservedWidth, sideTop,
+    keyHeight, keyboardGap, keyboardHeight, keyboardWidth, keyboardOffset
+  };
+}
+
 function fitGameLayout(){
   const main = document.querySelector("main");
   const wrap = $("#boardsWrap");
@@ -1265,71 +1559,47 @@ function fitGameLayout(){
     document.documentElement.clientHeight,
     visualViewport?.height || Number.POSITIVE_INFINITY
   ));
-  const compact = viewportWidth <= 600;
-  const extreme = viewportWidth < 320 || viewportHeight < 360;
-  const outerX = extreme ? Math.max(1, Math.min(3, viewportWidth * .012)) : compact ? 6 : 12;
-  const outerBottom = extreme ? Math.max(1, Math.min(3, viewportHeight * .012)) : compact ? 6 : 10;
-  const uiGap = extreme ? Math.max(1, Math.min(3, viewportHeight * .012)) : compact ? 6 : 10;
-  const topPadding = extreme ? Math.max(0, Math.min(2, viewportHeight * .008)) : compact ? 3 : 6;
-  const topbarGap = extreme ? Math.max(1, Math.min(4, viewportWidth * .012)) : 8;
-  const usableWidth = Math.max(1, Math.min(viewportWidth, 1600) - outerX * 2);
-
-  const topControlHeight = Math.max(8, Math.min(36, viewportHeight * .09, viewportWidth * .13));
-  const topControlSize = Math.max(10, Math.min(40, topControlHeight * 1.12));
-  const keyHeight = Math.max(4, Math.min(compact ? 30 : 40, viewportHeight * (extreme ? .055 : compact ? .04 : .048)));
-  const keyboardGap = Math.max(.5, Math.min(5, keyHeight * .12));
-  const keyboardHeight = keyHeight * 3 + keyboardGap * 2;
-  const keyboardWidth = Math.max(1, Math.min(usableWidth, 620, viewportWidth * (compact ? .99 : .46)));
-  const topbarHeight = topControlHeight + topPadding;
-  const availableBoardsHeight = Math.max(1, viewportHeight - outerBottom - topbarHeight - keyboardHeight - uiGap * 2);
-  document.documentElement.style.setProperty("--app-height", `${viewportHeight}px`);
-
-  const boardCount = modeCfg().boards;
-  const tries = getMaxTries();
-  const helpers = boardCount > 1;
-  const candidates = boardCount === 4 ? [4, 2, 1] : boardCount === 2 ? [2, 1] : [1];
-  let best = null;
-
-  candidates.forEach(columns => {
-    const rows = Math.ceil(boardCount / columns);
-    const boardsGap = Math.max(.5, Math.min(12, usableWidth * .012, availableBoardsHeight * .025));
-    const tileGap = Math.max(.5, Math.min(5, usableWidth * .004, availableBoardsHeight * .008));
-    const helperGap = helpers ? Math.max(.5, Math.min(5, usableWidth * .004)) : 0;
-    const helperRatio = helpers ? .55 : 0;
-    const widthPerShell = (usableWidth - boardsGap * (columns - 1)) / columns;
-    const tileByWidth = (widthPerShell - tileGap * (WORD_LENGTH - 1) - helperGap) / (WORD_LENGTH + helperRatio);
-    const shellHeightAvailable = (availableBoardsHeight - boardsGap * (rows - 1)) / rows;
-    const tileByHeight = (shellHeightAvailable - tileGap * (tries - 1)) / tries;
-    const tile = Math.floor(Math.min(tileByWidth, tileByHeight, compact ? 56 : 68) * 10) / 10;
-    if(tile < .5) return;
-    const helperSize = helpers ? Math.max(.5, Math.round(tile * helperRatio * 10) / 10) : 0;
-    const boardWidth = tile * WORD_LENGTH + tileGap * (WORD_LENGTH - 1);
-    const shellWidth = boardWidth + (helpers ? helperGap + helperSize : 0);
-    const shellHeight = tile * tries + tileGap * (tries - 1);
-    const totalWidth = shellWidth * columns + boardsGap * (columns - 1);
-    const totalHeight = shellHeight * rows + boardsGap * (rows - 1);
-    if(totalWidth <= usableWidth + 1 && totalHeight <= availableBoardsHeight + 1 && (!best || tile > best.tile)){
-      best = { columns, rows, boardsGap, tileGap, helperGap, helperSize, boardWidth, shellWidth, shellHeight, tile };
-    }
+  const layout = computeGameLayout({
+    viewportWidth,
+    viewportHeight,
+    boardCount:modeCfg().boards,
+    tries:getMaxTries(),
+    modeLabel:modeCfg().label,
+    previousLayout:main.dataset.controlsLayout,
+    previousMode:main.dataset.layoutMode,
+    mode:currentMode
   });
+  if(!layout) return;
 
-  if(!best) return;
+  const best = layout.board;
+  document.documentElement.style.setProperty("--app-height", `${viewportHeight}px`);
   main.classList.add("fitted-layout");
-  main.style.setProperty("--outer-x", `${outerX}px`);
-  main.style.setProperty("--outer-bottom", `${outerBottom}px`);
-  main.style.setProperty("--ui-gap", `${uiGap}px`);
-  main.style.setProperty("--top-padding", `${topPadding}px`);
-  main.style.setProperty("--topbar-gap", `${topbarGap}px`);
-  main.style.setProperty("--top-control-height", `${topControlHeight}px`);
-  main.style.setProperty("--top-control-size", `${topControlSize}px`);
-  main.style.setProperty("--top-control-padding", `${Math.max(1, Math.min(8, topControlHeight * .2))}px`);
-  main.style.setProperty("--topbar-font", `${Math.max(4, Math.min(16, topControlHeight * .44))}px`);
-  main.style.setProperty("--top-icon-font", `${Math.max(4, Math.min(18, topControlHeight * .5))}px`);
+  main.dataset.controlsLayout = layout.controlsLayout;
+  main.dataset.layoutMode = currentMode;
+  main.dataset.layoutTile = best.tile.toFixed(1);
+  main.dataset.layoutGrid = `${best.columns}x${best.rows}`;
+  main.dataset.layoutViewport = `${Math.round(viewportWidth)}x${Math.round(viewportHeight)}`;
+  main.style.setProperty("--outer-x", `${layout.outerX}px`);
+  main.style.setProperty("--outer-bottom", `${layout.outerBottom}px`);
+  main.style.setProperty("--ui-gap", `${layout.uiGap}px`);
+  main.style.setProperty("--top-padding", `${layout.topPadding}px`);
+  main.style.setProperty("--topbar-gap", `${layout.topbarGap}px`);
+  main.style.setProperty("--top-control-height", `${layout.topControlHeight}px`);
+  main.style.setProperty("--top-control-size", `${layout.topControlSize}px`);
+  main.style.setProperty("--top-control-padding", `${clampLayout(1, layout.topControlHeight * .2, 8)}px`);
+  main.style.setProperty("--topbar-font", `${layout.topbarFont}px`);
+  main.style.setProperty("--top-icon-font", `${clampLayout(8, layout.topControlHeight * .5, 18)}px`);
+  main.style.setProperty("--rail-width", `${layout.railWidth}px`);
+  main.style.setProperty("--rail-mode-height", `${layout.railModeHeight}px`);
+  main.style.setProperty("--rail-top", `${layout.railTop}px`);
+  main.style.setProperty("--split-width", `${layout.splitWidth}px`);
+  main.style.setProperty("--split-reserved-width", `${layout.splitReservedWidth}px`);
+  main.style.setProperty("--side-top", `${layout.sideTop}px`);
   main.style.setProperty("--boards-gap", `${best.boardsGap}px`);
   main.style.setProperty("--tile-gap", `${best.tileGap}px`);
   main.style.setProperty("--tile-size", `${best.tile}px`);
-  main.style.setProperty("--tile-font", `${Math.max(.5, Math.min(32, best.tile * .55))}px`);
-  main.style.setProperty("--tile-radius", `${Math.max(.5, Math.min(10, best.tile * .16))}px`);
+  main.style.setProperty("--tile-font", `${clampLayout(.5, best.tile * .55, 32)}px`);
+  main.style.setProperty("--tile-radius", `${clampLayout(.5, best.tile * .16, 10)}px`);
   main.style.setProperty("--tile-border", `${best.tile < 3 ? .5 : best.tile < 26 ? 1 : 2}px`);
   main.style.setProperty("--tile-padding", `${Math.max(0, best.tile * .06)}px`);
   main.style.setProperty("--board-width", `${best.boardWidth}px`);
@@ -1337,13 +1607,15 @@ function fitGameLayout(){
   main.style.setProperty("--shell-height", `${best.shellHeight}px`);
   main.style.setProperty("--helper-gap", `${best.helperGap}px`);
   main.style.setProperty("--helper-size", `${best.helperSize}px`);
-  main.style.setProperty("--helper-font", `${Math.max(.5, Math.min(16, best.helperSize * .58))}px`);
+  main.style.setProperty("--helper-font", `${clampLayout(.5, best.helperSize * .58, 16)}px`);
   main.style.setProperty("--helper-item-gap", `${Math.max(.5, best.tileGap * .6)}px`);
-  main.style.setProperty("--keyboard-width", `${keyboardWidth}px`);
-  main.style.setProperty("--key-height", `${keyHeight}px`);
-  main.style.setProperty("--keyboard-gap", `${keyboardGap}px`);
-  main.style.setProperty("--key-gap", `${Math.max(.5, keyboardGap)}px`);
-  main.style.setProperty("--key-font", `${Math.max(2.5, Math.min(23, keyHeight * .62))}px`);
+  main.style.setProperty("--keyboard-width", `${layout.keyboardWidth}px`);
+  main.style.setProperty("--keyboard-offset", `${layout.keyboardOffset}px`);
+  main.style.setProperty("--key-height", `${layout.keyHeight}px`);
+  main.style.setProperty("--keyboard-gap", `${layout.keyboardGap}px`);
+  main.style.setProperty("--key-gap", `${Math.max(.5, layout.keyboardGap)}px`);
+  main.style.setProperty("--key-font", `${clampLayout(2.5, layout.keyHeight * .62, 23)}px`);
+  main.style.setProperty("--key-enter-font", `${clampLayout(2.5, layout.keyHeight * .45, 18)}px`);
   wrap.style.gridTemplateColumns = `repeat(${best.columns}, ${best.shellWidth}px)`;
 }
 
