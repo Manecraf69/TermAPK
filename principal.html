@@ -6,28 +6,32 @@
 <title>TermAPK</title>
 <style>
   :root{
-    --bg: #121213;
-    --tile: #3a3a3c;
-    --text: #e6e6e6;
-    --kbd-bg: #818384;
-    --absent: #3a3a3c;
-    --present: #b59f3b;
-    --correct: #538d4e;
-    --border: #3a3a3c;
-    --accent: #6ca0ff;
-    --toast-bg: rgba(0,0,0,.85);
+    --bg: #120b24;
+    --tile: #27143d;
+    --text: #f8eaff;
+    --kbd-bg: #6e3d91;
+    --absent: #352044;
+    --present: #f6a21a;
+    --correct: #20e0b2;
+    --border: #6d3c8f;
+    --accent: #56d8ff;
+    --toast-bg: rgba(18, 6, 34, .92);
+    --synth-pink: #ff3cac;
+    --synth-purple: #8b5cf6;
+    --synth-blue: #35d5ff;
   }
   @media (prefers-color-scheme: light){
     :root{
-      --bg: #f2f2f2;
-      --tile: #d3d6da;
-      --text: #111;
-      --kbd-bg: #d3d6da;
-      --absent: #787c7e;
-      --present: #c9b458;
-      --correct: #6aaa64;
-      --border: #d3d6da;
-      --toast-bg: rgba(0,0,0,.85);
+      --bg: #120b24;
+      --tile: #27143d;
+      --text: #f8eaff;
+      --kbd-bg: #6e3d91;
+      --absent: #352044;
+      --present: #f6a21a;
+      --correct: #20e0b2;
+      --border: #6d3c8f;
+      --accent: #56d8ff;
+      --toast-bg: rgba(18, 6, 34, .92);
     }
   }
   *{box-sizing:border-box}
@@ -42,7 +46,9 @@
     margin:0;
     font-family: system-ui, -apple-system, Segoe UI, Roboto, Ubuntu, Cantarell, "Helvetica Neue", Arial, "Noto Sans", "Apple Color Emoji","Segoe UI Emoji","Segoe UI Symbol","Noto Color Emoji";
     color:var(--text);
-    background:var(--bg);
+    background:
+      radial-gradient(circle at 50% -20%, rgba(139,92,246,.28), transparent 42%),
+      linear-gradient(135deg, #120b24 0%, #1b0d32 48%, #0b1028 100%);
     display:flex;
     flex-direction:column;
     align-items:center;
@@ -56,6 +62,14 @@
     padding:8px 10px;
     cursor:pointer;
     font-weight:600;
+  }
+  .btn:focus,
+  .btn:focus-visible,
+  summary:focus,
+  summary:focus-visible,
+  .tile:focus,
+  .tile:focus-visible{
+    outline:none;
   }
   .tile.cursor{
     border-color: var(--accent);
@@ -258,6 +272,8 @@
   .tile.absent{ background:var(--absent); border-color:var(--absent); color:#fff;}
   .tile.present{ background:var(--present); border-color:var(--present); color:#fff;}
   .tile.correct{ background:var(--correct); border-color:var(--correct); color:#fff;}
+  .tile.duplicate-warning{animation:duplicateWarning .42s ease-in-out;}
+  .tile.missing-warning{animation:missingWarning .42s ease-in-out;}
 
   /* Animações */
   .shake{ animation: shake .3s linear; }
@@ -274,6 +290,14 @@
   @keyframes pop{
     from{transform:scale(0.9)}
     to{transform:scale(1)}
+  }
+  @keyframes duplicateWarning{
+    0%,100%{box-shadow:0 0 0 0 rgba(255,162,26,0);}
+    45%{background:#ff8a18; border-color:#ffd166; color:#24102f; box-shadow:0 0 16px rgba(255,138,24,.9);}
+  }
+  @keyframes missingWarning{
+    0%,100%{box-shadow:0 0 0 0 rgba(255,55,108,0);}
+    45%{background:#ff3864; border-color:#ff9aaf; color:#fff; box-shadow:0 0 16px rgba(255,56,100,.9);}
   }
   .winpop{ animation: winpop .35s ease; }
   @keyframes winpop{
@@ -625,6 +649,27 @@
   .stats{
     display:grid; grid-template-columns: repeat(4,1fr); gap:8px; margin-top:8px;
   }
+  .stats-mode-title{
+    margin:14px 0 0;
+    text-align:center;
+    color:var(--synth-blue, #56d8ff);
+    text-transform:uppercase;
+    letter-spacing:.12em;
+    font-size:.82rem;
+  }
+  .distribution-title{
+    margin:18px 0 8px;
+    text-align:center;
+    font-size:1.1rem;
+    color:var(--synth-pink, #ff3cac);
+  }
+  .distribution{display:grid;gap:5px;}
+  .distribution-row{display:grid;grid-template-columns:24px 1fr;gap:6px;align-items:center;min-height:24px;}
+  .distribution-label{text-align:right;font-weight:800;}
+  .distribution-track{min-width:0;height:24px;background:rgba(255,255,255,.08);border-radius:3px;overflow:hidden;}
+  .distribution-bar{height:100%;min-width:0;background:linear-gradient(90deg,var(--synth-purple,#8b5cf6),var(--synth-pink,#ff3cac));display:flex;align-items:center;justify-content:flex-end;padding:0 7px;font-weight:800;transition:width .2s ease;}
+  .distribution-row.loss .distribution-label{font-size:1.1rem;}
+  .distribution-row.loss .distribution-bar{background:linear-gradient(90deg,#49324f,#6b536f);}
   .stat{
     text-align:center; border:1px solid var(--border); border-radius:8px; padding:8px;
   }
@@ -880,7 +925,7 @@
     <div class="help-copy">
       <p class="about-creator"><b>Criador</b> - Manecraf</p>
       <p>Esse site foi criado inspirado no <a href="https://term.ooo/" target="_blank" rel="noopener noreferrer">term.ooo</a>, ótimo site e biblioteca de palavras, parabéns <a href="https://fserb.com/" target="_blank" rel="noopener noreferrer">Fernando</a>.</p>
-      <p>Não usei sua biblioteca de palavras, dei meu jeito.</p>
+      <p>Não usei sua lista de palavras, dei meu jeito, resultado inferior mas do meu jeito.</p>
       <p>Projeto feito no vibecoding com codex 5.4 e depois 5.6 Sol.</p>
     </div>
   </dialog>
@@ -888,12 +933,15 @@
   <dialog id="dlgEnd">
     <h2 id="endTitle">Parabéns!</h2>
     <p id="endMsg" class="small"></p>
+    <div id="statsMode" class="stats-mode-title">Solo</div>
     <div class="stats">
       <div class="stat"><div class="small">Jogos</div><div id="stGames" style="font-size:1.4rem; font-weight:800;">0</div></div>
-      <div class="stat"><div class="small">Vitórias</div><div id="stWins" style="font-size:1.4rem; font-weight:800;">0</div></div>
+      <div class="stat"><div class="small">% de vitórias</div><div id="stWins" style="font-size:1.4rem; font-weight:800;">0%</div></div>
       <div class="stat"><div class="small">Sequência</div><div id="stStreak" style="font-size:1.4rem; font-weight:800;">0</div></div>
       <div class="stat"><div class="small">Máx. Seq.</div><div id="stMax" style="font-size:1.4rem; font-weight:800;">0</div></div>
     </div>
+    <div class="distribution-title">Distribuição de tentativas</div>
+    <div id="attemptDistribution" class="distribution" aria-label="Distribuição de tentativas"></div>
     <div style="display:flex; gap:8px; margin-top:12px; justify-content:flex-end;">
       <button class="btn" id="btnAgain">Jogar de novo</button>
     </div>
@@ -1059,6 +1107,48 @@ function isDiscardedLetter(k){
     btn?.classList.contains("discarded");
 }
 
+function flashTiles(tiles, className){
+  [...new Set(tiles.filter(Boolean))].forEach(tile => {
+    clearTimeout(tile._feedbackTimer);
+    tile.classList.remove("duplicate-warning", "missing-warning");
+    void tile.offsetWidth;
+    tile.classList.add(className);
+    tile._feedbackTimer = setTimeout(() => tile.classList.remove(className), 460);
+  });
+}
+
+function boardKnownLetterState(board, letter){
+  const typed = normalize(String(letter || "")).toUpperCase();
+  let absent = false;
+  for(const entry of board.revealed || []){
+    for(let index = 0; index < WORD_LENGTH; index++){
+      if(normalize(entry.guess?.[index] || "").toUpperCase() !== typed) continue;
+      if(entry.outcome?.[index] === "present" || entry.outcome?.[index] === "correct") return "known";
+      if(entry.outcome?.[index] === "absent") absent = true;
+    }
+  }
+  return absent ? "absent" : "unknown";
+}
+
+function flashLetterFeedback(letter){
+  const typed = normalize(String(letter || "")).toUpperCase();
+  if(!typed) return;
+  getPlayableBoards().forEach(board => {
+    const inputTile = board.grid[currentRow]?.[currentCol];
+    const columnTiles = board.grid.flatMap(row => row).filter(tile =>
+      Number(tile.dataset.col) === currentCol &&
+      normalize(tile.textContent || "").toUpperCase() === typed
+    );
+    const yellowTiles = columnTiles.filter(tile => tile.classList.contains("present"));
+    if(yellowTiles.length) flashTiles([...yellowTiles, inputTile], "duplicate-warning");
+
+    // Só usa o histórico desta palavra; nunca consulta a solução antecipadamente.
+    if(boardKnownLetterState(board, typed) === "absent"){
+      flashTiles([inputTile], "missing-warning");
+    }
+  });
+}
+
 /* ===================== ESTADO ===================== */
 let currentRow = 0;
 let currentCol = 0;
@@ -1073,15 +1163,34 @@ const stats = {
   games: 0,
   wins: 0,
   streak: 0,
-  maxStreak: 0
+  maxStreak: 0,
+  modes: {}
 };
+function blankModeStats(tries){
+  return { games:0, wins:0, streak:0, maxStreak:0, attempts:Array(tries + 2).fill(0) };
+}
+function ensureModeStats(mode = currentMode){
+  const tries = GAME_MODES[mode]?.tries || MAX_TRIES;
+  const current = stats.modes[mode] || {};
+  const attempts = Array.isArray(current.attempts) ? current.attempts.slice(0, tries + 2) : [];
+  while(attempts.length < tries + 2) attempts.push(0);
+  stats.modes[mode] = {
+    ...blankModeStats(tries),
+    ...current,
+    attempts
+  };
+  return stats.modes[mode];
+}
 function loadStats(){
   try{
     const s = JSON.parse(localStorage.getItem("mini-termo-stats")||"{}");
     Object.assign(stats, s);
+    if(!stats.modes || typeof stats.modes !== "object") stats.modes = {};
+    Object.keys(GAME_MODES).forEach(mode => ensureModeStats(mode));
   }catch{}
 }
 function saveStats(){
+  Object.keys(GAME_MODES).forEach(mode => ensureModeStats(mode));
   localStorage.setItem("mini-termo-stats", JSON.stringify(stats));
 }
 
@@ -1251,6 +1360,7 @@ function buildBoards(){
         d.dataset.row = r;
         d.dataset.col = c;
         d.dataset.board = b;
+        d.tabIndex = -1;
         d.addEventListener("click", () => {
           if(gameOver || inputLocked || boardState.solved) return;
           if(r !== currentRow) return;
@@ -1387,11 +1497,21 @@ function resetGame(){
 
   updateActiveRowVisual();
   updateCursor();
+  focusFirstLetter();
 
   // Limpa estado interno do teclado
   colorKeyboard.clear();
   $$(".key").forEach(key => key.classList.remove("present", "correct", "manual-off", "discarded"));
   saveModeState();
+}
+
+function focusFirstLetter(){
+  currentRow = 0;
+  currentCol = 0;
+  cursorActive = true;
+  updateCursor();
+  const firstTile = getPlayableBoards()[0]?.grid[0]?.[0];
+  firstTile?.focus({ preventScroll:true });
 }
 
 function clampLayout(min, value, max){
@@ -1643,7 +1763,7 @@ function onVirtualKey(e){
       e.currentTarget.dataset.skipNextFlash = "0";
       clearTimeout(e.currentTarget._skipFlashTimer);
     }else{
-      flashKey(k, isDiscardedLetter(k) ? "error" : "normal");
+      flashKey(k, "normal");
     }
   }
   handleKey(k);
@@ -1795,6 +1915,7 @@ function addLetter(ch) {
     tile.classList.add("filled","pop");
     setTimeout(()=> tile.classList.remove("pop"), 80);
   });
+  flashLetterFeedback(ch);
 
   // Procura o próximo tile vazio à direita
   const row = rowBoards[0].grid[currentRow] || [];
@@ -1810,7 +1931,9 @@ function addLetter(ch) {
     currentCol = nextCol;
     cursorActive = true;
   } else {
-    cursorActive = false; // linha cheia
+    // Mantém o foco visual na última letra para permitir revisar/substituir.
+    currentCol = WORD_LENGTH - 1;
+    cursorActive = true;
   }
 
   updateCursor();
@@ -2247,11 +2370,31 @@ function rebuildKeyboardFromActiveBoards(){
 }
 
 /* ===================== FIM DE JOGO / ESTATÍSTICAS ===================== */
+function renderAttemptDistribution(modeStats, tries){
+  const container = $("#attemptDistribution");
+  if(!container) return;
+  const values = Array.from({length:tries}, (_, index) => modeStats.attempts[index + 1] || 0);
+  const losses = modeStats.attempts[tries + 1] || 0;
+  const maxValue = Math.max(1, ...values, losses);
+  container.innerHTML = "";
+  values.forEach((value, index) => {
+    const row = document.createElement("div");
+    row.className = "distribution-row";
+    row.innerHTML = `<div class="distribution-label">${index + 1}</div><div class="distribution-track"><div class="distribution-bar" style="width:${value ? Math.max(8, value / maxValue * 100) : 0}%">${value || "0"}</div></div>`;
+    container.appendChild(row);
+  });
+  const lossRow = document.createElement("div");
+  lossRow.className = "distribution-row loss";
+  lossRow.innerHTML = `<div class="distribution-label">💀</div><div class="distribution-track"><div class="distribution-bar" style="width:${losses ? Math.max(8, losses / maxValue * 100) : 0}%">${losses || "0"}</div></div>`;
+  container.appendChild(lossRow);
+}
+
 function endGame(won, tries){
   gameOver = true;
   inputLocked = false;
   saveModeState();
 
+  const modeStats = ensureModeStats(currentMode);
   stats.games++;
   if(won){
     stats.wins++;
@@ -2259,6 +2402,16 @@ function endGame(won, tries){
     if(stats.streak > stats.maxStreak) stats.maxStreak = stats.streak;
   }else{
     stats.streak = 0;
+  }
+  modeStats.games++;
+  if(won){
+    modeStats.wins++;
+    modeStats.streak++;
+    modeStats.maxStreak = Math.max(modeStats.maxStreak, modeStats.streak);
+    modeStats.attempts[Math.min(tries, modeStats.attempts.length - 1)]++;
+  }else{
+    modeStats.streak = 0;
+    modeStats.attempts[modeStats.attempts.length - 1]++;
   }
   saveStats();
 
@@ -2270,10 +2423,12 @@ function endGame(won, tries){
     ? `Você acertou em <b>${tries}</b> ${tries===1 ? "tentativa" : "tentativas"}.`
     : `A${answers.length > 1 ? "s palavras eram" : " palavra era"} <b>${answersText}</b>.`;
 
-  $("#stGames").textContent = stats.games;
-  $("#stWins").textContent = stats.wins;
-  $("#stStreak").textContent = stats.streak;
-  $("#stMax").textContent = stats.maxStreak;
+  $("#statsMode").textContent = `Estatísticas — ${modeCfg().label}`;
+  $("#stGames").textContent = modeStats.games;
+  $("#stWins").textContent = `${modeStats.games ? Math.round(modeStats.wins / modeStats.games * 100) : 0}%`;
+  $("#stStreak").textContent = modeStats.streak;
+  $("#stMax").textContent = modeStats.maxStreak;
+  renderAttemptDistribution(modeStats, modeCfg().tries);
 
   dlg.showModal();
 }
@@ -2355,7 +2510,7 @@ document.addEventListener("keydown", (e)=>{
     e.preventDefault();
   }
   if(e.key.length === 1 && isAlphaPt(e.key)){
-    flashKey(e.key, isDiscardedLetter(e.key) ? "error" : "normal");
+    flashKey(e.key, "normal");
     handleKey(e.key);
     e.preventDefault();
   }
@@ -2370,11 +2525,19 @@ $(".mode-menu").addEventListener("click", (e)=>{
   setMode(option.dataset.mode);
   $("#modePicker").open = false;
 });
-$("#btnReset").addEventListener("click", ()=>{
+function handleResetButton(){
   if(inputLocked) return;
   if($("#dlgEnd").open) $("#dlgEnd").close();
   resetGame();
   showToast(`${modeCfg().label} reiniciado`);
+}
+$("#btnReset").addEventListener("click", handleResetButton);
+$("#btnReset").addEventListener("keydown", (e)=>{
+  if(e.key === " "){
+    e.preventDefault();
+    e.stopPropagation();
+    handleResetButton();
+  }
 });
 $("#btnHelp").addEventListener("click", ()=>{
   $("#modePicker").open = false;
