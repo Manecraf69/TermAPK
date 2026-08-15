@@ -500,6 +500,7 @@
   main.fitted-layout[data-controls-layout="rail"] .topbar > .mode-picker,
   main.fitted-layout[data-controls-layout="rail"] .topbar > .mode-picker > summary{
     height:var(--rail-mode-height);
+    width:var(--rail-width);
   }
   main.fitted-layout[data-controls-layout="rail"] #btnMode{
     flex-direction:column;
@@ -538,7 +539,8 @@
     align-self:flex-end;
   }
 
-  /* Duas colunas laterais: ajuda/modo à esquerda e ações à direita. */
+  /* Pouca altura e largura suficiente: modo horizontal à esquerda e os
+     três controles auxiliares empilhados à direita. */
   main.fitted-layout[data-controls-layout="split"] .topbar{
     top:var(--side-top);
     left:var(--outer-x);
@@ -546,20 +548,21 @@
     width:auto;
     display:grid;
     grid-template-columns:var(--split-width) minmax(0, 1fr) var(--split-width);
-    grid-template-rows:repeat(2, var(--top-control-height));
-    gap:2px 0;
+    grid-template-rows:repeat(3, var(--top-control-height));
+    gap:2px 8px;
   }
   main.fitted-layout[data-controls-layout="split"] .topbar > .btn{
-    grid-column:1;
+    grid-column:3;
     grid-row:1;
     width:var(--top-control-size);
     justify-self:center;
   }
   main.fitted-layout[data-controls-layout="split"] .topbar > .mode-picker{
     grid-column:1;
-    grid-row:2;
+    grid-row:1 / span 3;
     width:100%;
-    height:var(--top-control-height);
+    height:calc(var(--top-control-height) * 3 + 4px);
+    align-self:center;
   }
   main.fitted-layout[data-controls-layout="split"] .topbar > .mode-picker > summary{
     width:100%;
@@ -567,7 +570,7 @@
   }
   main.fitted-layout[data-controls-layout="split"] .topbar-actions{
     grid-column:3;
-    grid-row:1 / span 2;
+    grid-row:2 / span 2;
     width:100%;
     height:auto;
     flex-direction:column;
@@ -1486,7 +1489,9 @@ function computeGameLayout({ viewportWidth, viewportHeight, boardCount, tries, m
       name:"rail",
       width:usableWidth - railWidth - 2,
       height:sideStageHeight,
-      valid:railControlsHeight <= sideStageHeight,
+      // O trilho continua lateral mesmo quando a altura é insuficiente;
+      // não deve ser substituído pelo topo em telas muito baixas.
+      valid:true,
       penalty:60
     },
     {
@@ -1498,10 +1503,6 @@ function computeGameLayout({ viewportWidth, viewportHeight, boardCount, tries, m
     }
   ];
 
-  // Acima de um tamanho confortável, pixels extras nos quadrados deixam de
-  // justificar mover controles para as laterais. Isso preserva o topo padrão
-  // sempre que ele já oferece boa leitura e boa área de toque.
-  const comfortableTile = clampLayout(38, shortestSide * .1, 54);
   const candidates = specs.flatMap(spec => {
     if(!spec.valid || spec.width <= 10 || spec.height <= 10) return [];
     const board = solveBoardGrid({
@@ -1511,18 +1512,22 @@ function computeGameLayout({ viewportWidth, viewportHeight, boardCount, tries, m
       tries
     });
     if(!board) return [];
-    const tileUtility = Math.min(board.tile, comfortableTile) * 1000;
-    return [{ ...spec, board, score:tileUtility + board.tile + board.fill - spec.penalty }];
+    return [{ ...spec, board, score:board.tile + board.fill - spec.penalty }];
   });
   if(!candidates.length) return null;
 
-  candidates.sort((a, b) => b.score - a.score);
-  let chosen = candidates[0];
-  if(previousMode === mode){
-    const previous = candidates.find(candidate => candidate.name === previousLayout);
-    const tolerance = Math.max(80, chosen.board.tile * 30);
-    const standardTopIsComfortable = chosen.name === "top" && chosen.board.tile >= comfortableTile;
-    if(previous && !standardTopIsComfortable && previous.score >= chosen.score - tolerance) chosen = previous;
+  // Acima de 400px de altura, os controles ficam no topo, inclusive em telas
+  // estreitas. A faixa 380x350 também já é confortável.
+  // Nos demais casos, o trilho vertical preserva o espaço dos tabuleiros.
+  // O split fica apenas como fallback quando o trilho não couber verticalmente.
+  const preferredName = viewportHeight > 400 ||
+    (viewportWidth > 380 && viewportHeight > 350)
+    ? "top"
+    : "rail";
+  let chosen = candidates.find(candidate => candidate.name === preferredName);
+  if(!chosen){
+    candidates.sort((a, b) => b.score - a.score);
+    chosen = candidates[0];
   }
 
   const boardTop = Math.max(topPadding, (chosen.height - chosen.board.totalHeight - 4) / 2);
