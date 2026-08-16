@@ -1662,13 +1662,19 @@ function computeGameLayout({ viewportWidth, viewportHeight, boardCount, tries, m
   });
   if(!candidates.length) return null;
 
-  // Cada candidato usa o espaço real que sobra para o modo atual. Escolhe
-  // a disposição com as maiores casas e usa o aproveitamento como desempate.
-  candidates.sort((a, b) =>
-    b.board.tile - a.board.tile ||
-    b.board.fill - a.board.fill
-  );
-  const chosen = candidates[0];
+  // Em telas confortáveis, o menu fica fixo no topo por consistência visual.
+  // Abaixo desse limite, a posição continua sendo escolhida pelo espaço real.
+  const forceTop = viewportWidth > 380 && viewportHeight > 350;
+  let chosen = forceTop
+    ? candidates.find(candidate => candidate.name === "top")
+    : null;
+  if(!chosen){
+    candidates.sort((a, b) =>
+      b.board.tile - a.board.tile ||
+      b.board.fill - a.board.fill
+    );
+    chosen = candidates[0];
+  }
 
   const boardTop = Math.max(topPadding, (chosen.height - chosen.board.totalHeight - 4) / 2);
   const railTop = Math.max(topPadding, (sideStageHeight - railControlsHeight) / 2);
@@ -2201,6 +2207,11 @@ function submitGuess() {
 
   flashKey("Enter", "normal");
   inputLocked = true;
+  // A palavra foi aceita: remove o foco visual/DOM enquanto a jogada é revelada.
+  // O cursor é reativado abaixo, quando a próxima tentativa estiver liberada.
+  cursorActive = false;
+  document.activeElement?.blur();
+  updateCursor();
   const evaluations = getPlayableBoards().map(board => {
     const outcome = evaluate(guess, board.solution);
     board.revealed.push({ guess, outcome: [...outcome] });
@@ -2209,7 +2220,9 @@ function submitGuess() {
   });
 
   // tempo total da animação
-  const revealTime = WORD_LENGTH * 260 + 150;
+  // A ultima letra termina em (WORD_LENGTH - 1) * 260 + 150 ms.
+  // Nao some um intervalo extra depois que a revelacao ja acabou.
+  const revealTime = (WORD_LENGTH - 1) * 260 + 150;
 
   setTimeout(() => {
     evaluations.forEach(({ board, outcome }) => {
@@ -2218,7 +2231,12 @@ function submitGuess() {
 
     // O cinza só entra depois que a animação de vitória terminou em todos os
     // tabuleiros, inclusive no Dueto e no Quarteto.
-    const winAnimationTime = (WORD_LENGTH - 1) * 120 + 360;
+    const hasWinAnimation = evaluations.some(({ outcome }) =>
+      outcome.every(state => state === "correct")
+    );
+    const winAnimationTime = hasWinAnimation
+      ? (WORD_LENGTH - 1) * 120 + 360
+      : 0;
     setTimeout(() => {
       evaluations.forEach(({ board, outcome }) => {
         if(outcome.every(s => s === "correct")){
