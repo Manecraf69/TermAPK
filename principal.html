@@ -915,7 +915,7 @@
             <kbd>Delete</kbd><span>apaga para a frente</span>
             <kbd>← ↑ ↓ →</kbd><span>move o cursor entre as casas</span>
             <kbd>Tab</kbd><span>avança para a próxima casa</span>
-            <kbd>1–5</kbd><span>seleciona diretamente uma coluna</span>
+            <kbd>1,2,3,4 e 5</kbd><span>seleciona diretamente uma coluna</span>
             <kbd>Ctrl+Z</kbd><span>desfaz a última edição</span>
             <kbd>Ctrl+Y</kbd><span>refaz a edição desfeita</span>
             <kbd>Ctrl+Shift+Z</kbd><span>também refaz a edição desfeita</span>
@@ -1159,13 +1159,17 @@ function flashLetterFeedback(letter){
       normalize(tile.textContent || "").toUpperCase() === typed
     );
     const yellowTiles = columnTiles.filter(tile => tile.classList.contains("present"));
-    if(yellowTiles.length) flashTiles([...yellowTiles, inputTile], "duplicate-warning");
+    const hasYellowInColumn = yellowTiles.length > 0;
+    if(hasYellowInColumn) flashTiles([...yellowTiles, inputTile], "duplicate-warning");
 
     // Se jÃ¡ houve uma ocorrÃªncia cinza desta letra nesta coluna, a posiÃ§Ã£o
     // foi descartada pelo jogo. O aviso Ã© apenas visual e nÃ£o bloqueia a
     // entrada; todos os exemplares da letra na coluna piscam juntos.
     const hasAbsentInColumn = columnTiles.some(tile => tile.classList.contains("absent"));
-    if(hasAbsentInColumn){
+    // Uma ocorrência amarela é uma confirmação mais forte que o cinza de
+    // outra tentativa. Nesse caso, não deixe o aviso de posição descartada
+    // sobrescrever o alerta amarelo.
+    if(hasAbsentInColumn && !hasYellowInColumn){
       flashTiles([...columnTiles, inputTile], "position-warning");
     }
 
@@ -1483,7 +1487,7 @@ function restoreModeState(state){
         tile.textContent = letter;
         tile.classList.toggle("filled", Boolean(letter));
         if(["correct", "present", "absent"].includes(result)) tile.classList.add(result);
-        updateRelevantLetters(board, letter, result, rowIndex);
+        updateRelevantLetters(board, letter, result, rowIndex, columnIndex);
       });
     });
 
@@ -2284,13 +2288,16 @@ function animateWinRow(board, rowIdx){
   });
 }
 
-function updateRelevantLetters(board, letter, state, rowIdx){
+function updateRelevantLetters(board, letter, state, rowIdx, colIdx = null){
   if(currentMode === "solo" || !board?.relevantEl) return;
   if(state !== "present" && state !== "correct") return;
   // O painel agrupa cada letra por sua forma-base: Ç=C, Ã/Á/Â=A etc.
   letter = normalize(String(letter || "")).toUpperCase();
   if(!letter) return;
-  board.relevantEvents.push({ letter, state, rowIdx });
+  // A mesma letra pode ser confirmada em posições diferentes em tentativas
+  // diferentes. Guardar a coluna permite que o ajudante acumule esses verdes
+  // sem contar duas vezes a mesma posição quando uma tentativa se repete.
+  board.relevantEvents.push({ letter, state, rowIdx, colIdx });
   if(!board.relevantOrder.includes(letter)) board.relevantOrder.push(letter);
 
   const discovered = new Map();
@@ -2299,20 +2306,27 @@ function updateRelevantLetters(board, letter, state, rowIdx){
     if(!rows.has(event.rowIdx)) rows.set(event.rowIdx, []);
     rows.get(event.rowIdx).push(event);
   });
+
+  // A quantidade de letras presentes é uma evidência por tentativa: usamos
+  // o maior total observado para não somar a mesma ocorrência entre linhas.
+  // Já os verdes podem estar em colunas diferentes, então são acumulados por
+  // posição. Isso faz, por exemplo, dois A verdes aparecerem como 2 verdes.
   rows.forEach(events => {
     const perGuess = new Map();
     events.forEach(event => {
-      const counts = perGuess.get(event.letter) || { total:0, correct:0 };
+      const counts = perGuess.get(event.letter) || { total:0, correctPositions:new Set() };
       counts.total++;
-      if(event.state === "correct") counts.correct++;
+      if(event.state === "correct" && Number.isInteger(event.colIdx)){
+        counts.correctPositions.add(event.colIdx);
+      }
       perGuess.set(event.letter, counts);
     });
     perGuess.forEach((counts, letter) => {
-      const best = discovered.get(letter);
-      if(!best || counts.total > best.total ||
-        (counts.total === best.total && counts.correct > best.correct)){
-        discovered.set(letter, { ...counts });
-      }
+      const best = discovered.get(letter) || { total:0, correctPositions:new Set() };
+      best.total = Math.max(best.total, counts.total);
+      counts.correctPositions.forEach(col => best.correctPositions.add(col));
+      best.total = Math.max(best.total, best.correctPositions.size);
+      discovered.set(letter, best);
     });
   });
 
@@ -2320,8 +2334,9 @@ function updateRelevantLetters(board, letter, state, rowIdx){
   board.relevantOrder.forEach(letter => {
     const counts = discovered.get(letter);
     if(!counts) return;
+    const correct = counts.correctPositions.size;
     for(let occurrence=0; occurrence<counts.total; occurrence++){
-      const state = occurrence < counts.correct ? "correct" : "present";
+      const state = occurrence < correct ? "correct" : "present";
       const item = document.createElement("span");
       item.className = `relevant-letter ${state}`;
       item.textContent = letter;
@@ -2342,7 +2357,7 @@ function revealRow(board, rowIdx, outcome){
         tile.classList.remove("flip");
         tile.classList.add(state);
         updateKeyboardKey(tile.textContent, state);
-        updateRelevantLetters(board, tile.textContent, state, rowIdx);
+        updateRelevantLetters(board, tile.textContent, state, rowIdx, i);
       }, 150);
     }, i * 260);
   });
