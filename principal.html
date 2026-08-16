@@ -20,20 +20,6 @@
     --synth-purple: #8b5cf6;
     --synth-blue: #35d5ff;
   }
-  @media (prefers-color-scheme: light){
-    :root{
-      --bg: #120b24;
-      --tile: #27143d;
-      --text: #f8eaff;
-      --kbd-bg: #6e3d91;
-      --absent: #352044;
-      --present: #f6a21a;
-      --correct: #20e0b2;
-      --border: #6d3c8f;
-      --accent: #56d8ff;
-      --toast-bg: rgba(18, 6, 34, .92);
-    }
-  }
   *{box-sizing:border-box}
   html, body{height:100%}
   html, body, main, .board, .keyboard, .row, .tile, .key, .toast, dialog{
@@ -544,18 +530,28 @@
     gap:3px;
     padding:4px 2px;
   }
-  main.fitted-layout[data-controls-layout="rail"] #btnMode .mode-label{
+  main.fitted-layout[data-controls-layout="rail"] #btnMode .mode-label,
+  main.fitted-layout[data-controls-layout="split"] #btnMode .mode-label{
     writing-mode:vertical-rl;
     text-orientation:mixed;
     transform:rotate(180deg);
     white-space:nowrap;
   }
-  main.fitted-layout[data-controls-layout="rail"] #btnMode::after{
+  main.fitted-layout[data-controls-layout="split"] #btnMode{
+    flex-direction:column;
+    align-items:center;
+    justify-content:center;
+    gap:3px;
+    padding:4px 2px;
+  }
+  main.fitted-layout[data-controls-layout="rail"] #btnMode::after,
+  main.fitted-layout[data-controls-layout="split"] #btnMode::after{
     flex:0 0 auto;
     line-height:1;
     transform:rotate(-90deg);
   }
-  main.fitted-layout[data-controls-layout="rail"] .mode-picker[open] #btnMode::after{
+  main.fitted-layout[data-controls-layout="rail"] .mode-picker[open] #btnMode::after,
+  main.fitted-layout[data-controls-layout="split"] .mode-picker[open] #btnMode::after{
     transform:rotate(90deg);
   }
   main.fitted-layout[data-controls-layout="rail"] .topbar-actions{
@@ -575,7 +571,7 @@
   }
 
   /* Pouca altura e largura suficiente: modo horizontal à esquerda e os
-     três controles auxiliares empilhados à direita. */
+     quatro controles auxiliares empilhados à direita. */
   main.fitted-layout[data-controls-layout="split"] .topbar{
     top:var(--side-top);
     left:var(--outer-x);
@@ -678,7 +674,7 @@
   .distribution-row{display:grid;grid-template-columns:24px 1fr;gap:6px;align-items:center;min-height:24px;}
   .distribution-label{text-align:right;font-weight:800;}
   .distribution-track{min-width:0;height:24px;background:rgba(255,255,255,.08);border-radius:3px;overflow:hidden;}
-  .distribution-bar{height:100%;min-width:0;background:linear-gradient(90deg,var(--synth-purple,#8b5cf6),var(--synth-pink,#ff3cac));display:flex;align-items:center;justify-content:flex-end;padding:0 7px;font-weight:800;transition:width .2s ease;}
+  .distribution-bar{height:100%;min-width:0;background:linear-gradient(90deg,var(--synth-purple,#8b5cf6),var(--synth-pink,#ff3cac));display:flex;align-items:center;justify-content:flex-end;padding:0 7px;font-weight:800;}
   .distribution-row.loss .distribution-label{font-size:1.1rem;}
   .distribution-row.loss .distribution-bar{background:linear-gradient(90deg,#49324f,#6b536f);}
   .stat{
@@ -1374,13 +1370,11 @@ function buildBoards(){
 
     const boardState = {
       shell,
-      el: board,
       grid: [],
       solution: "",
       solved: false,
       revealed: [],
       relevantEl,
-      relevantLetters: new Map(),
       relevantOrder: [],
       relevantEvents: []
     };
@@ -1596,7 +1590,7 @@ function solveBoardGrid({ availableWidth, availableHeight, boardCount, tries }){
   return best;
 }
 
-function computeGameLayout({ viewportWidth, viewportHeight, boardCount, tries, modeLabel, previousLayout, previousMode, mode }){
+function computeGameLayout({ viewportWidth, viewportHeight, boardCount, tries, modeLabel }){
   const mainWidth = Math.min(viewportWidth, 1600);
   const shortestSide = Math.min(viewportWidth, viewportHeight);
   const outerX = clampLayout(2, shortestSide * .018, 12);
@@ -1606,10 +1600,10 @@ function computeGameLayout({ viewportWidth, viewportHeight, boardCount, tries, m
   const topbarGap = clampLayout(2, shortestSide * .018, 8);
   const usableWidth = Math.max(1, mainWidth - outerX * 2);
 
-  const topControlHeight = clampLayout(18, Math.min(viewportHeight * .095, viewportWidth * .1), 36);
-  const topControlSize = clampLayout(18, topControlHeight * 1.12, 40);
-  const topbarFont = clampLayout(8, topControlHeight * .44, 16);
-  const keyHeight = clampLayout(12, Math.min(viewportHeight * .066, viewportWidth * .105), 44);
+  const topControlHeight = clampLayout(8, Math.min(viewportHeight * .095, viewportWidth * .1), 36);
+  const topControlSize = clampLayout(8, topControlHeight * 1.12, 40);
+  const topbarFont = clampLayout(6, topControlHeight * .44, 16);
+  const keyHeight = clampLayout(6, Math.min(viewportHeight * .066, viewportWidth * .105), 44);
   const keyboardGap = clampLayout(.5, keyHeight * .1, 2);
   const keyboardHeight = keyHeight * 3 + keyboardGap * 2;
 
@@ -1633,31 +1627,25 @@ function computeGameLayout({ viewportWidth, viewportHeight, boardCount, tries, m
     110
   );
   const railControlsHeight = topControlHeight * 4 + railModeHeight + 8;
-  const splitWidth = clampLayout(
-    topControlSize,
-    modeTextLength * topbarFont * .62 + 28,
-    120
-  );
+  const splitWidth = topControlSize;
   const splitReservedWidth = (splitWidth + 2) * 2;
   const splitControlsHeight = topControlHeight * 3 + 4;
 
   const specs = [
-    { name:"top", width:usableWidth, height:topStageHeight, valid:true, penalty:0 },
+    { name:"top", width:usableWidth, height:topStageHeight, valid:true },
     {
       name:"rail",
       width:usableWidth - railWidth - 2,
       height:sideStageHeight,
       // O trilho continua lateral mesmo quando a altura é insuficiente;
       // não deve ser substituído pelo topo em telas muito baixas.
-      valid:true,
-      penalty:60
+      valid:railControlsHeight <= sideStageHeight
     },
     {
       name:"split",
       width:usableWidth - splitReservedWidth,
       height:sideStageHeight,
-      valid:splitControlsHeight <= sideStageHeight,
-      penalty:35
+      valid:splitControlsHeight <= sideStageHeight
     }
   ];
 
@@ -1670,23 +1658,17 @@ function computeGameLayout({ viewportWidth, viewportHeight, boardCount, tries, m
       tries
     });
     if(!board) return [];
-    return [{ ...spec, board, score:board.tile + board.fill - spec.penalty }];
+    return [{ ...spec, board }];
   });
   if(!candidates.length) return null;
 
-  // Acima de 400px de altura, os controles ficam no topo, inclusive em telas
-  // estreitas. A faixa 380x350 também já é confortável.
-  // Nos demais casos, o trilho vertical preserva o espaço dos tabuleiros.
-  // O split fica apenas como fallback quando o trilho não couber verticalmente.
-  const preferredName = viewportHeight > 400 ||
-    (viewportWidth > 380 && viewportHeight > 350)
-    ? "top"
-    : "rail";
-  let chosen = candidates.find(candidate => candidate.name === preferredName);
-  if(!chosen){
-    candidates.sort((a, b) => b.score - a.score);
-    chosen = candidates[0];
-  }
+  // Cada candidato usa o espaço real que sobra para o modo atual. Escolhe
+  // a disposição com as maiores casas e usa o aproveitamento como desempate.
+  candidates.sort((a, b) =>
+    b.board.tile - a.board.tile ||
+    b.board.fill - a.board.fill
+  );
+  const chosen = candidates[0];
 
   const boardTop = Math.max(topPadding, (chosen.height - chosen.board.totalHeight - 4) / 2);
   const railTop = Math.max(topPadding, (sideStageHeight - railControlsHeight) / 2);
@@ -1695,9 +1677,6 @@ function computeGameLayout({ viewportWidth, viewportHeight, boardCount, tries, m
   return {
     controlsLayout:chosen.name,
     board:chosen.board,
-    boardRegionWidth:chosen.width,
-    boardRegionHeight:chosen.height,
-    candidates,
     outerX, outerBottom, uiGap, topPadding, topbarGap,
     topControlHeight, topControlSize, topbarFont,
     railWidth, railModeHeight, railTop,
@@ -1727,10 +1706,7 @@ function fitGameLayout(){
     viewportHeight,
     boardCount:modeCfg().boards,
     tries:getMaxTries(),
-    modeLabel:modeCfg().label,
-    previousLayout:main.dataset.controlsLayout,
-    previousMode:main.dataset.layoutMode,
-    mode:currentMode
+    modeLabel:modeCfg().label
   });
   if(!layout) return;
 
@@ -1738,10 +1714,6 @@ function fitGameLayout(){
   document.documentElement.style.setProperty("--app-height", `${viewportHeight}px`);
   main.classList.add("fitted-layout");
   main.dataset.controlsLayout = layout.controlsLayout;
-  main.dataset.layoutMode = currentMode;
-  main.dataset.layoutTile = best.tile.toFixed(1);
-  main.dataset.layoutGrid = `${best.columns}x${best.rows}`;
-  main.dataset.layoutViewport = `${Math.round(viewportWidth)}x${Math.round(viewportHeight)}`;
   main.style.setProperty("--outer-x", `${layout.outerX}px`);
   main.style.setProperty("--outer-bottom", `${layout.outerBottom}px`);
   main.style.setProperty("--ui-gap", `${layout.uiGap}px`);
@@ -1751,7 +1723,7 @@ function fitGameLayout(){
   main.style.setProperty("--top-control-size", `${layout.topControlSize}px`);
   main.style.setProperty("--top-control-padding", `${clampLayout(1, layout.topControlHeight * .2, 8)}px`);
   main.style.setProperty("--topbar-font", `${layout.topbarFont}px`);
-  main.style.setProperty("--top-icon-font", `${clampLayout(8, layout.topControlHeight * .5, 18)}px`);
+  main.style.setProperty("--top-icon-font", `${clampLayout(6, layout.topControlHeight * .5, 18)}px`);
   main.style.setProperty("--rail-width", `${layout.railWidth}px`);
   main.style.setProperty("--rail-mode-height", `${layout.railModeHeight}px`);
   main.style.setProperty("--rail-top", `${layout.railTop}px`);
@@ -2327,11 +2299,9 @@ function updateRelevantLetters(board, letter, state, rowIdx){
   });
 
   board.relevantEl.innerHTML = "";
-  board.relevantLetters.clear();
   board.relevantOrder.forEach(letter => {
     const counts = discovered.get(letter);
     if(!counts) return;
-    const items = [];
     for(let occurrence=0; occurrence<counts.total; occurrence++){
       const state = occurrence < counts.correct ? "correct" : "present";
       const item = document.createElement("span");
@@ -2339,9 +2309,7 @@ function updateRelevantLetters(board, letter, state, rowIdx){
       item.textContent = letter;
       item.setAttribute("aria-label", `${letter}, ${state === "correct" ? "correta" : "presente"}, ocorrência ${occurrence + 1} de ${counts.total}`);
       board.relevantEl.appendChild(item);
-      items.push({ el:item, state });
     }
-    board.relevantLetters.set(letter, items);
   });
 }
 
