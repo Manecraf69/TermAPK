@@ -68,12 +68,18 @@
   summary:focus,
   summary:focus-visible,
   .tile:focus,
-  .tile:focus-visible{
-    outline:none;
+  .tile:focus-visible,
+  .key:focus,
+  .key:focus-visible{
+    outline:none !important;
   }
   .tile.cursor{
     border-color: var(--accent);
     box-shadow: 0 0 0 2px var(--accent) inset;
+  }
+  /* A borda cinza da casa preenchida nÃ£o deve aparecer junto do cursor azul. */
+  .tile.cursor.filled{
+    border-color:var(--accent);
   }
   .tile.disabled {
     opacity: 0.3; /* visual apagado */
@@ -296,6 +302,11 @@
     45%{background:#ff8a18; border-color:#ffd166; color:#24102f; box-shadow:0 0 16px rgba(255,138,24,.9);}
   }
   @keyframes missingWarning{
+    0%,100%{box-shadow:0 0 0 0 rgba(255,55,108,0);}
+    45%{background:#ff3864; border-color:#ff9aaf; color:#fff; box-shadow:0 0 16px rgba(255,56,100,.9);}
+  }
+  .tile.position-warning{animation:positionWarning .42s ease-in-out;}
+  @keyframes positionWarning{
     0%,100%{box-shadow:0 0 0 0 rgba(255,55,108,0);}
     45%{background:#ff3864; border-color:#ff9aaf; color:#fff; box-shadow:0 0 16px rgba(255,56,100,.9);}
   }
@@ -572,7 +583,7 @@
     width:auto;
     display:grid;
     grid-template-columns:var(--split-width) minmax(0, 1fr) var(--split-width);
-    grid-template-rows:repeat(3, var(--top-control-height));
+    grid-template-rows:repeat(4, var(--top-control-height));
     gap:2px 8px;
   }
   main.fitted-layout[data-controls-layout="split"] .topbar > .btn{
@@ -583,9 +594,9 @@
   }
   main.fitted-layout[data-controls-layout="split"] .topbar > .mode-picker{
     grid-column:1;
-    grid-row:1 / span 3;
+    grid-row:1 / span 4;
     width:100%;
-    height:calc(var(--top-control-height) * 3 + 4px);
+    height:calc(var(--top-control-height) * 4 + 6px);
     align-self:center;
   }
   main.fitted-layout[data-controls-layout="split"] .topbar > .mode-picker > summary{
@@ -594,7 +605,7 @@
   }
   main.fitted-layout[data-controls-layout="split"] .topbar-actions{
     grid-column:3;
-    grid-row:2 / span 2;
+    grid-row:2 / span 3;
     width:100%;
     height:auto;
     flex-direction:column;
@@ -696,6 +707,9 @@
     z-index:1;
     margin-left:auto;
   }
+  .end-dialog-header{margin-bottom:8px;}
+  #dlgEnd.stats-only #endMsg,
+  #dlgEnd.stats-only #btnAgain{display:none;}
   #dlgHelp{
     width:min(calc(100dvw - 6px), 800px);
     max-height:calc(100dvh - 4px);
@@ -857,6 +871,7 @@
       </details>
       <div class="topbar-actions">
         <button class="btn icon-btn" id="btnReset" aria-label="Reiniciar modo atual" title="Reiniciar modo atual">↻</button>
+        <button class="btn icon-btn" id="btnStats" aria-label="Abrir estatísticas" title="Estatísticas">☷</button>
         <button class="btn icon-btn" id="btnInfo" aria-label="Sobre o projeto" title="Sobre o projeto">i</button>
       </div>
     </div>
@@ -931,7 +946,10 @@
   </dialog>
 
   <dialog id="dlgEnd">
-    <h2 id="endTitle">Parabéns!</h2>
+    <div class="dialog-header end-dialog-header">
+      <h2 id="endTitle">Parabéns!</h2>
+      <button class="btn icon-btn" id="btnEndClose" aria-label="Fechar estatísticas">×</button>
+    </div>
     <p id="endMsg" class="small"></p>
     <div id="statsMode" class="stats-mode-title">Solo</div>
     <div class="stats">
@@ -1107,10 +1125,15 @@ function isDiscardedLetter(k){
     btn?.classList.contains("discarded");
 }
 
+function flashInputKey(k){
+  if(String(k || "") === "Enter") return;
+  flashKey(k, isDiscardedLetter(k) ? "error" : "normal");
+}
+
 function flashTiles(tiles, className){
   [...new Set(tiles.filter(Boolean))].forEach(tile => {
     clearTimeout(tile._feedbackTimer);
-    tile.classList.remove("duplicate-warning", "missing-warning");
+    tile.classList.remove("duplicate-warning", "missing-warning", "position-warning");
     void tile.offsetWidth;
     tile.classList.add(className);
     tile._feedbackTimer = setTimeout(() => tile.classList.remove(className), 460);
@@ -1142,6 +1165,14 @@ function flashLetterFeedback(letter){
     const yellowTiles = columnTiles.filter(tile => tile.classList.contains("present"));
     if(yellowTiles.length) flashTiles([...yellowTiles, inputTile], "duplicate-warning");
 
+    // Se jÃ¡ houve uma ocorrÃªncia cinza desta letra nesta coluna, a posiÃ§Ã£o
+    // foi descartada pelo jogo. O aviso Ã© apenas visual e nÃ£o bloqueia a
+    // entrada; todos os exemplares da letra na coluna piscam juntos.
+    const hasAbsentInColumn = columnTiles.some(tile => tile.classList.contains("absent"));
+    if(hasAbsentInColumn){
+      flashTiles([...columnTiles, inputTile], "position-warning");
+    }
+
     // Só usa o histórico desta palavra; nunca consulta a solução antecipadamente.
     if(boardKnownLetterState(board, typed) === "absent"){
       flashTiles([inputTile], "missing-warning");
@@ -1171,9 +1202,11 @@ function blankModeStats(tries){
 }
 function ensureModeStats(mode = currentMode){
   const tries = GAME_MODES[mode]?.tries || MAX_TRIES;
+  const minimumWinAttempt = GAME_MODES[mode]?.boards || 1;
   const current = stats.modes[mode] || {};
   const attempts = Array.isArray(current.attempts) ? current.attempts.slice(0, tries + 2) : [];
   while(attempts.length < tries + 2) attempts.push(0);
+  for(let attempt = 1; attempt < minimumWinAttempt; attempt++) attempts[attempt] = 0;
   stats.modes[mode] = {
     ...blankModeStats(tries),
     ...current,
@@ -1300,6 +1333,7 @@ function triggerModeTransition(){
 function setMode(mode){
   if(inputLocked || !GAME_MODES[mode] || mode === currentMode) return;
   const dlg = $("#dlgEnd");
+  dlg.classList.remove("stats-only");
   if(dlg?.open) dlg.close();
   saveModeState();
   currentMode = mode;
@@ -1400,6 +1434,10 @@ function buildKeyboard(){
     letters.forEach(key=>{
       const b = document.createElement("button");
       b.className = "key";
+      // O teclado virtual Ã© acionado por toque/clique, nÃ£o por foco.
+      b.tabIndex = -1;
+      b.addEventListener("mousedown", e => e.preventDefault());
+      b.addEventListener("focus", () => b.blur());
       if(key === "Backspace"){
         b.innerHTML = '<span class="key-symbol">⌫</span>';
       }else{
@@ -1594,14 +1632,14 @@ function computeGameLayout({ viewportWidth, viewportHeight, boardCount, tries, m
     modeTextLength * topbarFont * .64 + topbarFont * .9 + topControlHeight * .35 + 6,
     110
   );
-  const railControlsHeight = topControlHeight * 3 + railModeHeight + 6;
+  const railControlsHeight = topControlHeight * 4 + railModeHeight + 8;
   const splitWidth = clampLayout(
     topControlSize,
     modeTextLength * topbarFont * .62 + 28,
     120
   );
   const splitReservedWidth = (splitWidth + 2) * 2;
-  const splitControlsHeight = topControlHeight * 2 + 2;
+  const splitControlsHeight = topControlHeight * 3 + 4;
 
   const specs = [
     { name:"top", width:usableWidth, height:topStageHeight, valid:true, penalty:0 },
@@ -1759,12 +1797,7 @@ function onVirtualKey(e){
   }
   const k = e.currentTarget.dataset.key;
   if(k !== "Enter"){
-    if(e.currentTarget.dataset.skipNextFlash === "1"){
-      e.currentTarget.dataset.skipNextFlash = "0";
-      clearTimeout(e.currentTarget._skipFlashTimer);
-    }else{
-      flashKey(k, "normal");
-    }
+    flashInputKey(k);
   }
   handleKey(k);
 }
@@ -1789,15 +1822,13 @@ function onVirtualKeyTouchEnd(e){
     e.preventDefault();
   }else{
     const key = btn.dataset.key;
-    if(key?.length === 1 && isDiscardedLetter(key)){
-      flashKey(key, "error");
-      btn.dataset.skipNextFlash = "1";
-      clearTimeout(btn._skipFlashTimer);
-      btn._skipFlashTimer = setTimeout(() => {
-        btn.dataset.skipNextFlash = "0";
-      }, 800);
-    }
+    e.preventDefault();
+    flashInputKey(key);
+    handleKey(key);
   }
+  btn.dataset.suppressClick = "1";
+  clearTimeout(btn._suppressClickTimer);
+  btn._suppressClickTimer = setTimeout(() => btn.dataset.suppressClick = "0", 800);
   btn._longPressTriggered = false;
 }
 function onVirtualKeyTouchCancel(e){
@@ -1932,7 +1963,6 @@ function addLetter(ch) {
     cursorActive = true;
   } else {
     // Mantém o foco visual na última letra para permitir revisar/substituir.
-    currentCol = WORD_LENGTH - 1;
     cursorActive = true;
   }
 
@@ -2211,35 +2241,42 @@ function submitGuess() {
 
   setTimeout(() => {
     evaluations.forEach(({ board, outcome }) => {
-      const solved = outcome.every(s => s === "correct");
-      if(solved){
-        board.solved = true;
-        board.shell.classList.add("solved");
-        animateWinRow(board, currentRow);
-      }
+      if(outcome.every(s => s === "correct")) animateWinRow(board, currentRow);
     });
-    rebuildKeyboardFromActiveBoards();
-    const won = boardsState.length > 0 && boardsState.every(board => board.solved);
-    if (won) {
-      setTimeout(() => endGame(true, currentRow + 1), WORD_LENGTH * 120 + 220);
-      return;
-    }
 
-    // Se passou do limite de tentativas, derrota
-    if (currentRow >= getMaxTries() - 1) {
-      endGame(false, getMaxTries());
-      return;
-    }
+    // O cinza só entra depois que a animação de vitória terminou em todos os
+    // tabuleiros, inclusive no Dueto e no Quarteto.
+    const winAnimationTime = (WORD_LENGTH - 1) * 120 + 360;
+    setTimeout(() => {
+      evaluations.forEach(({ board, outcome }) => {
+        if(outcome.every(s => s === "correct")){
+          board.solved = true;
+          board.shell.classList.add("solved");
+        }
+      });
+      rebuildKeyboardFromActiveBoards();
+      const won = boardsState.length > 0 && boardsState.every(board => board.solved);
+      if (won) {
+        endGame(true, currentRow + 1);
+        return;
+      }
 
-    // Próxima linha apenas se ainda houver tentativas
-    currentRow++;
-    currentCol = 0;
-    clearInputHistory();
-    updateActiveRowVisual();
-    cursorActive = true;
-    inputLocked = false;
-    updateCursor();
-    saveModeState();
+      // Se passou do limite de tentativas, derrota
+      if (currentRow >= getMaxTries() - 1) {
+        endGame(false, getMaxTries());
+        return;
+      }
+
+      // Próxima linha apenas se ainda houver tentativas
+      currentRow++;
+      currentCol = 0;
+      clearInputHistory();
+      updateActiveRowVisual();
+      cursorActive = true;
+      inputLocked = false;
+      updateCursor();
+      saveModeState();
+    }, winAnimationTime);
 
   }, revealTime);
 }
@@ -2281,10 +2318,11 @@ function updateRelevantLetters(board, letter, state, rowIdx){
       perGuess.set(event.letter, counts);
     });
     perGuess.forEach((counts, letter) => {
-      const best = discovered.get(letter) || { total:0, correct:0 };
-      best.total = Math.max(best.total, counts.total);
-      best.correct = Math.max(best.correct, counts.correct);
-      discovered.set(letter, best);
+      const best = discovered.get(letter);
+      if(!best || counts.total > best.total ||
+        (counts.total === best.total && counts.correct > best.correct)){
+        discovered.set(letter, { ...counts });
+      }
     });
   });
 
@@ -2373,20 +2411,31 @@ function rebuildKeyboardFromActiveBoards(){
 function renderAttemptDistribution(modeStats, tries){
   const container = $("#attemptDistribution");
   if(!container) return;
-  const values = Array.from({length:tries}, (_, index) => modeStats.attempts[index + 1] || 0);
+  const minimumWinAttempt = GAME_MODES[currentMode]?.boards || 1;
+  const values = Array.from({length:tries - minimumWinAttempt + 1}, (_, index) => modeStats.attempts[index + minimumWinAttempt] || 0);
   const losses = modeStats.attempts[tries + 1] || 0;
   const maxValue = Math.max(1, ...values, losses);
   container.innerHTML = "";
   values.forEach((value, index) => {
     const row = document.createElement("div");
     row.className = "distribution-row";
-    row.innerHTML = `<div class="distribution-label">${index + 1}</div><div class="distribution-track"><div class="distribution-bar" style="width:${value ? Math.max(8, value / maxValue * 100) : 0}%">${value || "0"}</div></div>`;
+    row.innerHTML = `<div class="distribution-label">${index + minimumWinAttempt}</div><div class="distribution-track"><div class="distribution-bar" style="width:${value ? Math.max(8, value / maxValue * 100) : 0}%">${value || "0"}</div></div>`;
     container.appendChild(row);
   });
   const lossRow = document.createElement("div");
   lossRow.className = "distribution-row loss";
   lossRow.innerHTML = `<div class="distribution-label">💀</div><div class="distribution-track"><div class="distribution-bar" style="width:${losses ? Math.max(8, losses / maxValue * 100) : 0}%">${losses || "0"}</div></div>`;
   container.appendChild(lossRow);
+}
+
+function renderStatsDialog(){
+  const modeStats = ensureModeStats(currentMode);
+  $("#statsMode").textContent = `Estatísticas — ${modeCfg().label}`;
+  $("#stGames").textContent = modeStats.games;
+  $("#stWins").textContent = `${modeStats.games ? Math.round(modeStats.wins / modeStats.games * 100) : 0}%`;
+  $("#stStreak").textContent = modeStats.streak;
+  $("#stMax").textContent = modeStats.maxStreak;
+  renderAttemptDistribution(modeStats, modeCfg().tries);
 }
 
 function endGame(won, tries){
@@ -2408,7 +2457,10 @@ function endGame(won, tries){
     modeStats.wins++;
     modeStats.streak++;
     modeStats.maxStreak = Math.max(modeStats.maxStreak, modeStats.streak);
-    modeStats.attempts[Math.min(tries, modeStats.attempts.length - 1)]++;
+    const minimumWinAttempt = GAME_MODES[currentMode]?.boards || 1;
+    if(tries >= minimumWinAttempt){
+      modeStats.attempts[Math.min(tries, modeStats.attempts.length - 1)]++;
+    }
   }else{
     modeStats.streak = 0;
     modeStats.attempts[modeStats.attempts.length - 1]++;
@@ -2416,6 +2468,7 @@ function endGame(won, tries){
   saveStats();
 
   const dlg = $("#dlgEnd");
+  dlg.classList.remove("stats-only");
   $("#endTitle").textContent = won ? "🎉 Parabéns!" : "💡 Boa tentativa!";
   const answers = boardsState.map(b => b.solution).filter(Boolean);
   const answersText = answers.length > 1 ? answers.join(" e ") : (answers[0] || "");
@@ -2423,13 +2476,18 @@ function endGame(won, tries){
     ? `Você acertou em <b>${tries}</b> ${tries===1 ? "tentativa" : "tentativas"}.`
     : `A${answers.length > 1 ? "s palavras eram" : " palavra era"} <b>${answersText}</b>.`;
 
-  $("#statsMode").textContent = `Estatísticas — ${modeCfg().label}`;
-  $("#stGames").textContent = modeStats.games;
-  $("#stWins").textContent = `${modeStats.games ? Math.round(modeStats.wins / modeStats.games * 100) : 0}%`;
-  $("#stStreak").textContent = modeStats.streak;
-  $("#stMax").textContent = modeStats.maxStreak;
-  renderAttemptDistribution(modeStats, modeCfg().tries);
+  renderStatsDialog();
 
+  dlg.showModal();
+}
+
+function openStatsDialog(){
+  const dlg = $("#dlgEnd");
+  if(dlg.open) return;
+  dlg.classList.add("stats-only");
+  $("#endTitle").textContent = "📊 Estatísticas";
+  $("#endMsg").textContent = "";
+  renderStatsDialog();
   dlg.showModal();
 }
 
@@ -2510,7 +2568,7 @@ document.addEventListener("keydown", (e)=>{
     e.preventDefault();
   }
   if(e.key.length === 1 && isAlphaPt(e.key)){
-    flashKey(e.key, "normal");
+    flashInputKey(e.key);
     handleKey(e.key);
     e.preventDefault();
   }
@@ -2518,6 +2576,13 @@ document.addEventListener("keydown", (e)=>{
 $("#btnAgain").addEventListener("click", ()=>{
   $("#dlgEnd").close();
   resetGame();
+});
+$("#btnEndClose").addEventListener("click", ()=>{
+  $("#dlgEnd").close();
+});
+$("#btnStats").addEventListener("click", ()=>{
+  $("#modePicker").open = false;
+  openStatsDialog();
 });
 $(".mode-menu").addEventListener("click", (e)=>{
   const option = e.target.closest(".mode-option");
