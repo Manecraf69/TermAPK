@@ -1,0 +1,42 @@
+{
+  "name": "termapk",
+  "version": "1.0.0",
+  "description": "Mini Termo em aplicativo portátil para Windows",
+  "main": "main.js",
+  "author": "",
+  "license": "MIT",
+  "scripts": {
+    "start": "electron .",
+    "build": "electron-builder --win portable"
+  },
+  "devDependencies": {
+    "electron": "^36.4.0",
+    "electron-builder": "^26.0.12"
+  },
+  "build": {
+    "appId": "com.termapk.app",
+    "productName": "TermAPK",
+    "asar": true,
+    "files": [
+      "main.js",
+      "principal.html",
+      "package.json"
+    ],
+    "win": {
+      "target": [
+        "portable"
+      ],
+      "artifactName": "TermAPK-Portable.exe"
+    },
+    "portable": {
+      "requestExecutionLevel": "user"
+    },
+    "directories": {
+      "output": "temp/dist"
+    }
+  },
+  "allowScripts": {
+    "electron@36.9.5": true,
+    "electron-winstaller@5.4.0": true
+  }
+}

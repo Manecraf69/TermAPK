@@ -1,0 +1,11 @@
+# Dependências locais
+node_modules/
+
+# Arquivos temporários e artefatos gerados
+temp/*
+dist/
+
+# Logs
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
